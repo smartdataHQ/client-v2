@@ -1,30 +1,30 @@
 # Build stage
-FROM node:20.8.1-alpine AS builder
+FROM oven/bun:1.3.5-alpine AS builder
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json yarn.lock ./
-RUN chown -R nextjs:nodejs /app
+COPY package.json bun.lock ./
+RUN chown -R appuser:appgroup /app
 
 # Switch to non-root user
-USER nextjs
+USER appuser
 
 # Install dependencies
-RUN yarn install --frozen-lockfile --production=false
+RUN bun install --frozen-lockfile
 
 # Copy source code (as root to ensure proper permissions)
 USER root
 COPY . .
-RUN chown -R nextjs:nodejs /app
-USER nextjs
+RUN chown -R appuser:appgroup /app
+USER appuser
 
 # Build the application
-RUN npx vite build
+RUN bun run build
 
 # Production stage - use nginx for better performance
 FROM nginx:alpine
