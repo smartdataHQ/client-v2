@@ -56,9 +56,3 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: quicklookup/synmetrix-client-v2:${{ env.IMAGE_TAG }}
-
-      - name: Semantic Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: bun run semantic-release
