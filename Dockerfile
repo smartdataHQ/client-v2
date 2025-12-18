@@ -23,8 +23,8 @@ COPY . .
 RUN chown -R appuser:appgroup /app
 USER appuser
 
-# Build the application
-RUN bun run build
+# Build the application (skip postbuild which creates archives we don't need)
+RUN bunx --bun vite build
 
 # Production stage - use nginx for better performance
 FROM nginx:alpine
