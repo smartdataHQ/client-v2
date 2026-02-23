@@ -152,7 +152,7 @@ export const queryState: PlaygroundState = {
   ...queryBaseMembers,
   order: [],
   timezone: "UTC",
-  limit: 1000,
+  limit: 100,
   offset: 0,
 };
 

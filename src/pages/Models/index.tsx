@@ -234,6 +234,7 @@ export const Models: React.FC<ModelsProps> = ({
             onCreateBranch={onCreateBranch}
             onCreateFile={onSchemaCreate}
             onSelectFile={openSchema}
+            activeFile={activeTab}
             dataSources={dataSources || []}
             dataSourceId={dataSource?.id}
             versionsCount={versionsCount}

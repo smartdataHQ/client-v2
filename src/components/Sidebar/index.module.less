@@ -1,5 +1,15 @@
+.resizableWrapper {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  height: 100%;
+}
+
 .wrapper {
-  width: 282px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
   background: #f9f9f9;
   border-right: 1px solid rgba(0, 0, 0, 0.1);
 
@@ -24,6 +34,8 @@
 
 .body {
   background: #f9f9f9;
+  overflow-y: auto;
+  height: calc(100% - 60px);
 }
 
 .iconContainer {
@@ -32,4 +44,21 @@
   justify-content: center;
   width: 25px;
   height: 25px;
+}
+
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s;
+  z-index: 10;
+
+  &:hover,
+  &:active {
+    background: rgba(163, 27, 203, 0.3);
+  }
 }

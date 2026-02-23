@@ -113,7 +113,7 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
   const {
     order,
     hitLimit,
-    limit = 1000,
+    limit = 100,
     error,
     rows,
     columns,
@@ -219,13 +219,13 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
         className={s.table}
         settings={settings}
         rowHeight={rowHeight}
-        footer={(tableRows) => (
-          <div className={s.tableFooter}>
-            {t("data_section.shown")}: {tableRows.length} / {limit},{" "}
+        toolbarExtra={
+          <span className={s.toolbarInfo}>
+            {t("data_section.shown")}: {rows.length} / {limit},{" "}
             {t("data_section.offset")}: {offset}, {t("data_section.columns")}:{" "}
             {columns.length}
-          </div>
-        )}
+          </span>
+        }
       />
     );
   }, [

@@ -24,7 +24,7 @@ interface ExploreSettingsFormProps {
 
 const ExploreSettingsForm: FC<ExploreSettingsFormProps> = ({
   defaultValues = {
-    limit: 1000,
+    limit: 100,
     offset: 0,
   } as DataSchemaFormValues,
   onChange,
