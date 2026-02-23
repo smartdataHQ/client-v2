@@ -1,12 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import {
+  ColumnWidthOutlined,
+  HolderOutlined,
   MoreOutlined,
   SortAscendingOutlined,
   SortDescendingOutlined,
 } from "@ant-design/icons";
 import { getOr } from "unchanged";
 import cn from "classnames";
-import { Alert, Empty, Spin, Tooltip, Typography, message } from "antd";
+import { Alert, Button, Empty, Spin, Tooltip, Typography, message } from "antd";
 import { useTable, useSortBy } from "react-table";
 import copy from "copy-to-clipboard";
 import {
@@ -38,7 +40,10 @@ import type { FC, ReactNode } from "react";
 import type { MenuProps } from "antd";
 
 const COL_WIDTH = 200;
-const INDEX_COL_WIDTH = 50;
+const INDEX_COL_WIDTH = 70;
+const MIN_COL_WIDTH = 100;
+const PX_PER_CHAR = 8;
+const HEADER_PADDING = 32;
 
 // set with unique ids inside https://stackoverflow.com/a/49821454
 export class SortBySet extends Set {
@@ -136,6 +141,8 @@ interface VirtualTableProps {
   className?: string;
   settings?: QuerySettings;
   sortinMode?: "client-side" | "server-side";
+  showAutoSizeButton?: boolean;
+  toolbarExtra?: ReactNode;
 }
 
 const VirtualTable: FC<VirtualTableProps> = ({
@@ -164,7 +171,61 @@ const VirtualTable: FC<VirtualTableProps> = ({
   loading,
   loadingTip,
   sortinMode = "client-side",
+  showAutoSizeButton = true,
+  toolbarExtra,
 }) => {
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [tableKey, setTableKey] = useState(0);
+  const resizeRef = useRef<{
+    colId: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+
+  const getColumnWidth = useCallback(
+    (colId: string) =>
+      Math.max(MIN_COL_WIDTH, columnWidths[colId] ?? COL_WIDTH),
+    [columnWidths]
+  );
+
+  const onResizeStart = useCallback(
+    (colId: string, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resizeRef.current = {
+        colId,
+        startX: e.clientX,
+        startWidth: getColumnWidth(colId),
+      };
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [getColumnWidth]
+  );
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const { colId, startX, startWidth } = resizeRef.current;
+      const newWidth = Math.max(MIN_COL_WIDTH, startWidth + e.clientX - startX);
+      setColumnWidths((prev) => ({ ...prev, [colId]: newWidth }));
+    };
+    const onMouseUp = () => {
+      if (resizeRef.current) {
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        setTableKey((k) => k + 1);
+      }
+      resizeRef.current = null;
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
   const defaultColumns = useMemo(
     () =>
       Object.keys(getOr({}, 0, data)).map((colId) => {
@@ -196,21 +257,49 @@ const VirtualTable: FC<VirtualTableProps> = ({
     useSortBy
   );
 
+  const autoSizeColumns = useCallback(() => {
+    if (flatHeaders.length === 0) return;
+    const HEADER_EXTRA = 48;
+    const newWidths: Record<string, number> = {};
+    const rawRows = data || [];
+    const hasNoRows = rawRows.length === 0;
+    flatHeaders.forEach((col) => {
+      const headerStr = typeof col.Header === "string" ? col.Header : col.id;
+      const headerWidth =
+        String(headerStr).length * PX_PER_CHAR + HEADER_PADDING + HEADER_EXTRA;
+      let maxDataWidth = 0;
+      rawRows.forEach((row: any) => {
+        const val = row?.[col.id];
+        const str =
+          typeof val === "object" ? JSON.stringify(val) : String(val ?? "");
+        const len = Math.min(str.length, 100);
+        maxDataWidth = Math.max(
+          maxDataWidth,
+          len * PX_PER_CHAR + HEADER_PADDING
+        );
+      });
+      const baseWidth = Math.max(headerWidth, maxDataWidth);
+      newWidths[col.id] = Math.max(
+        MIN_COL_WIDTH,
+        hasNoRows ? Math.ceil(headerWidth * 1.15) : baseWidth
+      );
+    });
+    setColumnWidths(newWidths);
+    setTableKey((k) => k + 1);
+    message.success("Columns auto-sized");
+  }, [flatHeaders, data]);
+
   const headerRenderer: TableHeaderRenderer = ({ label, columnData }) => {
     const { sortDirection, onSortChange, columnId, granularity } = columnData;
-    let humanLabel = label;
-
-    if (granularity) {
-      humanLabel = `${label} (by ${granularity})`;
-    }
+    const fullTitle = (columnData as any).fullTitle;
+    const tooltipTitle =
+      fullTitle ?? (granularity ? `${label} (by ${granularity})` : label);
+    const shortLabel = typeof label === "string" ? label : String(label ?? "");
 
     const children = [
-      <Tooltip
-        key="label"
-        title={typeof humanLabel === "string" ? humanLabel : null}
-      >
+      <Tooltip key="label" title={tooltipTitle}>
         <Paragraph ellipsis className={styles.headerParagraph}>
-          {humanLabel}
+          {shortLabel}
         </Paragraph>
       </Tooltip>,
     ];
@@ -248,22 +337,32 @@ const VirtualTable: FC<VirtualTableProps> = ({
       },
     ];
 
-    if (sortDisabled) {
-      return children;
+    if (!sortDisabled) {
+      children.push(
+        <PopoverButton
+          key="dropdown"
+          popoverType="dropdown"
+          buttonProps={{
+            type: "link",
+            className: styles.dropdownBtn,
+          }}
+          icon={icon}
+          trigger={["click"]}
+          menu={{ items: routes }}
+        />
+      );
     }
 
+    const dataKey = (columnData as any).dataKey ?? columnId;
     children.push(
-      <PopoverButton
-        key="dropdown"
-        popoverType="dropdown"
-        buttonProps={{
-          type: "link",
-          className: styles.dropdownBtn,
-        }}
-        icon={icon}
-        trigger={["click"]}
-        menu={{ items: routes }}
-      />
+      <div
+        key="resize"
+        className={styles.columnResizeHandle}
+        title="Drag to resize"
+        onMouseDown={(e) => onResizeStart(dataKey, e)}
+      >
+        <HolderOutlined />
+      </div>
     );
 
     return children;
@@ -344,14 +443,10 @@ const VirtualTable: FC<VirtualTableProps> = ({
 
   const isEmpty = !columns.length && !rows.length;
   const tableWidth = useMemo(() => {
-    let tw = flatHeaders.length * COL_WIDTH;
-
-    if (!hideIndexColumn) {
-      tw += INDEX_COL_WIDTH;
-    }
-
+    let tw = flatHeaders.reduce((sum, col) => sum + getColumnWidth(col.id), 0);
+    if (!hideIndexColumn) tw += INDEX_COL_WIDTH;
     return tw;
-  }, [flatHeaders.length, hideIndexColumn]);
+  }, [flatHeaders, getColumnWidth, hideIndexColumn]);
 
   const defaultEmptyComponent = (
     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyDesc} />
@@ -378,8 +473,24 @@ const VirtualTable: FC<VirtualTableProps> = ({
               height: height + 10,
             }}
           >
+            {(showAutoSizeButton || toolbarExtra) && (
+              <div className={styles.toolbar}>
+                {showAutoSizeButton && (
+                  <Button
+                    type="default"
+                    size="small"
+                    icon={<ColumnWidthOutlined />}
+                    onClick={autoSizeColumns}
+                  >
+                    Auto-size columns
+                  </Button>
+                )}
+                {toolbarExtra}
+              </div>
+            )}
             <div className={styles.tableWrapper} role="table">
               <Table
+                key={`${tableWidth}-${tableKey}`}
                 id={tableId}
                 className={cn(styles.table, tableId && styles.minWidth)}
                 width={tableWidth}
@@ -389,7 +500,6 @@ const VirtualTable: FC<VirtualTableProps> = ({
                 rowCount={rows.length}
                 rowGetter={({ index }) => rows[index]}
                 rowStyle={({ index }) => ({
-                  width: tableWidth,
                   background: index % 2 ? "rgba(249, 249, 249, 1)" : "none",
                 })}
                 noRowsRenderer={noRowsRenderer}
@@ -401,10 +511,15 @@ const VirtualTable: FC<VirtualTableProps> = ({
                 {!hideIndexColumn && (
                   <Column
                     className={styles.indexColumn}
-                    label="Index"
+                    label="#"
                     cellDataGetter={({ rowData }) => rowData.index + 1}
+                    cellRenderer={({ cellData }) => (
+                      <div className={styles.indexCell}>{cellData}</div>
+                    )}
                     dataKey="index"
                     width={INDEX_COL_WIDTH}
+                    flexGrow={0}
+                    flexShrink={0}
                   />
                 )}
                 {flatHeaders.map((col) => {
@@ -412,6 +527,7 @@ const VirtualTable: FC<VirtualTableProps> = ({
                   const columnMemberId = `${cube}.${field}`;
 
                   const value = col.render("Header");
+                  const fullTitle = (col as any).fullTitle ?? value;
 
                   const colSortConfig =
                     sortBy.find((sortItem) => sortItem.id === columnMemberId) ||
@@ -429,12 +545,16 @@ const VirtualTable: FC<VirtualTableProps> = ({
                       key={col.id}
                       label={value}
                       dataKey={col.id}
-                      width={COL_WIDTH}
+                      width={getColumnWidth(col.id)}
+                      flexGrow={0}
+                      flexShrink={0}
                       headerRenderer={headerRenderer}
                       cellDataGetter={cellDataGetter}
                       cellRenderer={internalCellRenderer}
                       columnData={{
                         columnId: columnMemberId,
+                        dataKey: col.id,
+                        fullTitle,
                         onSortChange,
                         sortDirection,
                         granularity,

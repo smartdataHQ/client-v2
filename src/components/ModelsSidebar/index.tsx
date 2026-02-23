@@ -46,6 +46,7 @@ export interface ModelsSidebarProps {
     editFile: Partial<Dataschema>
   ) => void;
   onCreateFile: (values: Partial<Dataschema>) => void;
+  activeFile?: string | null;
   dataSources: DataSourceInfo[];
   onDataSourceChange: (dataSource: DataSourceInfo | null) => void;
   versionsCount?: number;
@@ -73,6 +74,7 @@ const ModelsSidebar: FC<ModelsSidebarProps> = ({
   onDeleteBranch,
   onSchemaDelete,
   onSchemaUpdate,
+  activeFile,
   dataSources,
   onDataSourceChange,
   dataSourceId,
@@ -195,7 +197,10 @@ const ModelsSidebar: FC<ModelsSidebarProps> = ({
               return (
                 <div
                   key={f.id}
-                  className={styles.fileBtn}
+                  className={cn(
+                    styles.fileBtn,
+                    f.name === activeFile && styles.fileBtnActive
+                  )}
                   onClick={() => onSelectFile(f.name)}
                 >
                   <Row justify={"space-between"} wrap={false}>

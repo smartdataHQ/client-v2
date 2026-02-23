@@ -1,3 +1,10 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .tableWrapper {
   width: 100%;
   overflow: auto;
@@ -63,12 +70,33 @@
   white-space: nowrap;
   text-align: left;
   text-overflow: ellipsis;
+  position: relative;
 }
 
 .headerParagraph {
   margin-bottom: 0 !important;
   font-weight: 700;
   font-size: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.columnResizeHandle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  color: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+
+  &:hover {
+    color: rgba(163, 27, 203, 0.6);
+  }
 }
 
 .table :global(.ReactVirtualized__Table__row) {
@@ -84,9 +112,14 @@
   padding: 13px 0px;
 }
 
+.table :global(.ReactVirtualized__Table__rowColumn:last-of-type),
+.table :global(.ReactVirtualized__Table__headerColumn:last-of-type) {
+  padding-right: 16px;
+}
+
 .table :global(.ReactVirtualized__Table__rowColumn:first-of-type),
 .table :global(.ReactVirtualized__Table__headerColumn:first-of-type) {
-  margin-left: 18px;
+  margin-left: 8px;
 }
 
 .table :global(.ReactVirtualized__Table__Grid) {
@@ -95,7 +128,14 @@
 }
 
 .indexColumn {
-  color: var(--color-black);
+  color: #000 !important;
+  overflow: visible !important;
+}
+
+.indexCell {
+  color: #000 !important;
+  font-weight: 600;
+  font-size: 12px;
 }
 
 // .table :global(.ReactVirtualized__Table__row:nth-child(even)) {

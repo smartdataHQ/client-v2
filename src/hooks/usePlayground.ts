@@ -10,7 +10,6 @@ import useExplorationData from "@/hooks/useExplorationData";
 import pickKeys from "@/utils/helpers/pickKeys";
 import equals from "@/utils/helpers/equals";
 import type { CubeMembers } from "@/types/cube";
-import { getTitle } from "@/utils/helpers/getTitles";
 import type { QuerySettings } from "@/types/querySettings";
 import type {
   ExplorationData,
@@ -68,7 +67,7 @@ const reducer: Reducer<QuerySettings, Action> = (
   return state;
 };
 
-export const getColumns = (selectedQueryMembers: CubeMembers, settings = {}) =>
+export const getColumns = (selectedQueryMembers: CubeMembers) =>
   [
     ...Object.values(selectedQueryMembers.dimensions || {}).map((d) => ({
       ...d,
@@ -77,7 +76,8 @@ export const getColumns = (selectedQueryMembers: CubeMembers, settings = {}) =>
     ...Object.values(selectedQueryMembers.measures || {}),
   ].map((c) => ({
     id: c.name,
-    Header: getTitle(settings, c),
+    Header: c.shortTitle ?? c.title ?? c.name,
+    fullTitle: c.title ?? c.name,
     accessor: (row: any) => row[c.name],
     colId: c.name,
     type: c.type,
@@ -131,8 +131,8 @@ export default ({ meta = [], explorationData, rawSql }: Props) => {
       return [];
     }
 
-    return getColumns(selectedQueryMembers, settings);
-  }, [selectedQueryMembers, settings]);
+    return getColumns(selectedQueryMembers);
+  }, [selectedQueryMembers]);
 
   const explorationState: ExplorationState = useMemo(
     () => ({

@@ -98,7 +98,10 @@ const ExploreCubes: FC<ExploreCubesProps> = ({
                 {cube}
               </div>
             }
-            className={styles.panel}
+            className={cn(
+              styles.panel,
+              cubeSelectedCount > 0 && styles.panelSelected
+            )}
             extra={
               <Badge
                 count={cubeSelectedCount}
