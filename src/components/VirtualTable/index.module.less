@@ -1,3 +1,7 @@
+.virtualTableRoot {
+  width: 100%;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -7,7 +11,8 @@
 
 .tableWrapper {
   width: 100%;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .alert {
@@ -29,19 +34,10 @@
   min-height: 100%;
   max-height: 100%;
   margin: 0;
-
   padding: 0;
-  overflow: visible;
   font-weight: 400;
-
   font-size: 11px;
   border: 0;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 .table :global(.ReactVirtualized__Grid__innerScrollContainer:focus) {
@@ -66,11 +62,18 @@
   align-self: baseline;
   justify-content: start;
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
   white-space: nowrap;
   text-align: left;
   text-overflow: ellipsis;
   position: relative;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
 }
 
 .headerParagraph {
@@ -82,17 +85,13 @@
 }
 
 .columnResizeHandle {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 8px;
+  width: 12px;
   cursor: col-resize;
   color: rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  flex-shrink: 0;
 
   &:hover {
     color: rgba(163, 27, 203, 0.6);
