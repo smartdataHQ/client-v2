@@ -176,6 +176,7 @@ const VirtualTable: FC<VirtualTableProps> = ({
 }) => {
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [tableKey, setTableKey] = useState(0);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<{
     colId: string;
     startX: number;
@@ -296,14 +297,6 @@ const VirtualTable: FC<VirtualTableProps> = ({
       fullTitle ?? (granularity ? `${label} (by ${granularity})` : label);
     const shortLabel = typeof label === "string" ? label : String(label ?? "");
 
-    const children = [
-      <Tooltip key="label" title={tooltipTitle}>
-        <Paragraph ellipsis className={styles.headerParagraph}>
-          {shortLabel}
-        </Paragraph>
-      </Tooltip>,
-    ];
-
     let icon = <MoreOutlined />;
 
     if (sortDirection) {
@@ -337,35 +330,38 @@ const VirtualTable: FC<VirtualTableProps> = ({
       },
     ];
 
-    if (!sortDisabled) {
-      children.push(
-        <PopoverButton
-          key="dropdown"
-          popoverType="dropdown"
-          buttonProps={{
-            type: "link",
-            className: styles.dropdownBtn,
-          }}
-          icon={icon}
-          trigger={["click"]}
-          menu={{ items: routes }}
-        />
-      );
-    }
-
     const dataKey = (columnData as any).dataKey ?? columnId;
-    children.push(
-      <div
-        key="resize"
-        className={styles.columnResizeHandle}
-        title="Drag to resize"
-        onMouseDown={(e) => onResizeStart(dataKey, e)}
-      >
-        <HolderOutlined />
-      </div>
-    );
 
-    return children;
+    return (
+      <>
+        <Tooltip title={tooltipTitle}>
+          <Paragraph ellipsis className={styles.headerParagraph}>
+            {shortLabel}
+          </Paragraph>
+        </Tooltip>
+        <div className={styles.headerActions}>
+          {!sortDisabled && (
+            <PopoverButton
+              popoverType="dropdown"
+              buttonProps={{
+                type: "link",
+                className: styles.dropdownBtn,
+              }}
+              icon={icon}
+              trigger={["click"]}
+              menu={{ items: routes }}
+            />
+          )}
+          <div
+            className={styles.columnResizeHandle}
+            title="Drag to resize"
+            onMouseDown={(e) => onResizeStart(dataKey, e)}
+          >
+            <HolderOutlined />
+          </div>
+        </div>
+      </>
+    );
   };
 
   const cellDataGetter: TableCellDataGetter = ({ rowData, dataKey }) => {
@@ -448,6 +444,10 @@ const VirtualTable: FC<VirtualTableProps> = ({
     return tw;
   }, [flatHeaders, getColumnWidth, hideIndexColumn]);
 
+  const wrapperWidth = wrapperRef.current?.clientWidth || width;
+  const hasOverflow = tableWidth > wrapperWidth;
+  const effectiveTableWidth = hasOverflow ? tableWidth : wrapperWidth;
+
   const defaultEmptyComponent = (
     <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyDesc} />
   );
@@ -466,13 +466,7 @@ const VirtualTable: FC<VirtualTableProps> = ({
               message={msg.text}
             />
           ))}
-          <div
-            className={cn(className)}
-            style={{
-              width: `min(100%, ${width})`,
-              height: height + 10,
-            }}
-          >
+          <div className={cn(className, styles.virtualTableRoot)}>
             {(showAutoSizeButton || toolbarExtra) && (
               <div className={styles.toolbar}>
                 {showAutoSizeButton && (
@@ -488,12 +482,17 @@ const VirtualTable: FC<VirtualTableProps> = ({
                 {toolbarExtra}
               </div>
             )}
-            <div className={styles.tableWrapper} role="table">
+            <div
+              ref={wrapperRef}
+              className={styles.tableWrapper}
+              role="table"
+              style={hasOverflow ? { height: height + 14 } : undefined}
+            >
               <Table
-                key={`${tableWidth}-${tableKey}`}
+                key={`${effectiveTableWidth}-${tableKey}`}
                 id={tableId}
                 className={cn(styles.table, tableId && styles.minWidth)}
-                width={tableWidth}
+                width={effectiveTableWidth}
                 height={height}
                 headerHeight={headerHeight}
                 rowHeight={rowHeight}
@@ -546,7 +545,7 @@ const VirtualTable: FC<VirtualTableProps> = ({
                       label={value}
                       dataKey={col.id}
                       width={getColumnWidth(col.id)}
-                      flexGrow={0}
+                      flexGrow={hasOverflow ? 0 : 1}
                       flexShrink={0}
                       headerRenderer={headerRenderer}
                       cellDataGetter={cellDataGetter}
