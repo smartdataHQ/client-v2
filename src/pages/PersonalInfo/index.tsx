@@ -47,7 +47,7 @@ export const PersonalInfo: React.FC<PersonalInfoProps> = ({
 
 const PersonalInfoWrapper = () => {
   const { t } = useTranslation(["settings", "pages"]);
-  const { logout, changePass } = useAuth();
+  const { signOut } = useAuth();
 
   const [, setLocation] = useLocation();
   const { currentUser } = CurrentUserStore();
@@ -68,26 +68,15 @@ const PersonalInfoWrapper = () => {
     });
   };
 
-  const onUpdatePassword = async (data: Security) => {
-    const values = {
-      old_password: data.oldPassword,
-      new_password: data.newPassword,
-    };
-
-    const res = await changePass(values);
-
-    if (res.statusCode === 204) {
-      setError(undefined);
-      message.success(t("settings:personal_info.password_updated"));
-    } else {
-      setError(res?.message || res?.error);
-    }
+  const onUpdatePassword = async (_data: Security) => {
+    // Password management is now handled by WorkOS
+    message.info(
+      "Password changes are managed through your identity provider."
+    );
   };
 
   const onLogout = async () => {
-    await logout();
-    cleanTokens();
-    setLocation(SIGNIN);
+    await signOut();
   };
 
   const initialValue = {

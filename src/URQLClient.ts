@@ -1,10 +1,9 @@
 import { authExchange } from "@urql/exchange-auth";
 import { retryExchange } from "@urql/exchange-retry";
-import { history } from "@vitjs/runtime";
 import { createClient as createWsClient } from "graphql-ws";
 import { createClient, fetchExchange, subscriptionExchange } from "urql";
 
-import { fetchRefreshToken } from "@/hooks/useAuth";
+import { fetchToken } from "@/hooks/useAuth";
 import AuthTokensStore from "@/stores/AuthTokensStore";
 import { SIGNIN } from "@/utils/constants/paths";
 
@@ -46,7 +45,7 @@ type Headers = {
 };
 
 export default () => {
-  const { accessToken, refreshToken, JWTpayload, setAuthData, cleanTokens } =
+  const { accessToken, JWTpayload, setAuthData, cleanTokens } =
     AuthTokensStore();
 
   const client = useMemo(() => {
@@ -97,20 +96,13 @@ export default () => {
           );
         },
         refreshAuth: async () => {
-          if (refreshToken) {
-            const result = await fetchRefreshToken(refreshToken);
-
-            if (result.error) {
-              cleanTokens();
-              history.push(SIGNIN);
-              return;
-            }
-
-            setAuthData({
-              accessToken: result.jwt_token,
-              refreshToken: result.refresh_token,
-            });
+          const result = await fetchToken();
+          if (!result) {
+            cleanTokens();
+            window.location.href = SIGNIN;
+            return;
           }
+          setAuthData({ accessToken: result.accessToken });
         },
       })),
       retryExchange({
@@ -133,7 +125,7 @@ export default () => {
       url: HASURA_GRAPHQL_ENDPOINT,
       exchanges,
     });
-  }, [JWTpayload, accessToken, cleanTokens, refreshToken, setAuthData]);
+  }, [JWTpayload, accessToken, cleanTokens, setAuthData]);
 
   return client;
 };

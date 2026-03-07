@@ -18,6 +18,7 @@ import {
   useTeamDataQuery,
 } from "@/graphql/generated";
 import { dbTiles } from "@/mocks/dataSources";
+import { fetchToken } from "@/hooks/useAuth";
 import AuthTokensStore from "@/stores/AuthTokensStore";
 import CurrentUserStore, { LAST_TEAM_ID_KEY } from "@/stores/CurrentUserStore";
 import type { Alert, RawAlert } from "@/types/alert";
@@ -217,9 +218,32 @@ export default () => {
     setUserData,
     setTeamData,
   } = CurrentUserStore();
-  const { JWTpayload, accessToken } = AuthTokensStore();
+  const { JWTpayload, accessToken, setAuthData } = AuthTokensStore();
   const userId = JWTpayload?.["x-hasura-user-id"];
   const lastTeamId = localStorage.getItem(LAST_TEAM_ID_KEY);
+
+  // Track whether initial token fetch is in progress
+  const [tokenFetchDone, setTokenFetchDone] = useState(false);
+
+  // On mount: fetch token from server session (cookie-based auth)
+  useEffect(() => {
+    if (!accessToken) {
+      fetchToken()
+        .then((result) => {
+          if (result) {
+            setAuthData({ accessToken: result.accessToken });
+          } else {
+            window.location.href = SIGNIN;
+          }
+          setTokenFetchDone(true);
+        })
+        .catch(() => {
+          setTokenFetchDone(true);
+        });
+    } else {
+      setTokenFetchDone(true);
+    }
+  }, []);
 
   const [, execCreateTeamMutation] = useCreateTeamMutation();
   const [currentUserData, execQueryCurrentUser] = useCurrentUserQuery({
@@ -253,10 +277,10 @@ export default () => {
       }
     }
 
-    if (!accessToken) {
+    if (!accessToken && tokenFetchDone) {
       window.location.href = SIGNIN;
     }
-  }, [accessToken, userId, currentTeam?.id]);
+  }, [accessToken, userId, currentTeam?.id, tokenFetchDone]);
 
   useEffect(() => {
     if (teamData.data) {

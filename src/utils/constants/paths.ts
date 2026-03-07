@@ -1,9 +1,9 @@
 export const HOME = "/";
 
 export const AUTH = "/userauth";
-export const SIGNUP = `${AUTH}/signup`;
-export const SIGNIN = `${AUTH}/signin`;
-export const LOGOUT = `${AUTH}/logout`;
+export const SIGNUP = "/signup";
+export const SIGNIN = "/signin";
+export const LOGOUT = "/logout";
 
 export const SIGNALS = "/signals";
 export const ALERTS = `${SIGNALS}/alerts`;

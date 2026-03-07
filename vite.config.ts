@@ -103,7 +103,7 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (p) => p.replace("/ws", "/graphql"),
       },
-      "/auth": "http://localhost:8081",
+      "/auth": "http://localhost:3000",
       "/api/v1": "http://localhost:4000",
     },
   },

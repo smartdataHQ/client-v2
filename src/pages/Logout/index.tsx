@@ -2,28 +2,17 @@ import { Result } from "antd";
 import { useTranslation } from "react-i18next";
 
 import useAuth from "@/hooks/useAuth";
-import AuthTokensStore from "@/stores/AuthTokensStore";
-import useLocation from "@/hooks/useLocation";
-import Button from "@/components/Button";
 import BasicLayout from "@/layouts/BasicLayout";
-import { SIGNIN } from "@/utils/constants/paths";
+import Button from "@/components/Button";
 
 import s from "./index.module.less";
 
 const Logout: React.FC = () => {
   const { t } = useTranslation(["logout"]);
-  const { logout } = useAuth();
-  const { cleanTokens } = AuthTokensStore();
-  const [, setLocation] = useLocation();
-
-  const onLogout = async () => {
-    await logout();
-    cleanTokens();
-    setLocation(SIGNIN);
-  };
+  const { signOut } = useAuth();
 
   useEffect(() => {
-    onLogout();
+    signOut();
   }, []);
 
   return (

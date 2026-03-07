@@ -16,6 +16,14 @@ interface AuthLinksProps {
 const AuthLinks: FC<AuthLinksProps> = ({ currentPage }) => {
   const { t } = useTranslation(["common"]);
   const [, setLocation] = useLocation();
+  const [signupEnabled, setSignupEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch("/auth/config")
+      .then((r) => r.json())
+      .then((data) => setSignupEnabled(data.signupEnabled === true))
+      .catch(() => setSignupEnabled(false));
+  }, []);
 
   return (
     <Space>
@@ -30,7 +38,7 @@ const AuthLinks: FC<AuthLinksProps> = ({ currentPage }) => {
             : t("common:words.sign_in")}
         </Button>
       )}
-      {currentPage !== "signup" && (
+      {signupEnabled && currentPage !== "signup" && (
         <Button
           className={styles.btn}
           type="primary"

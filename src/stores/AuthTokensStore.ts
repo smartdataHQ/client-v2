@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import jwtDecode from "jwt-decode";
 
 import type { JwtPayload } from "jwt-decode";
@@ -14,12 +13,10 @@ interface Payload extends JwtPayload {
 }
 
 type AuthData = {
-  refreshToken: string;
   accessToken: string;
 };
 
 interface TokensState {
-  refreshToken: string | null;
   accessToken: string | null;
   JWTpayload: HasuraJWTPayload | null;
   setAuthData: (authData: AuthData) => void;
@@ -27,40 +24,28 @@ interface TokensState {
 }
 
 const defaultTokens = {
-  refreshToken: null,
   accessToken: null,
   JWTpayload: null,
 };
 
-const AuthTokensStore = create<TokensState>()(
-  persist(
-    (set) => ({
-      ...defaultTokens,
-      setAuthData: (authData: AuthData) => {
-        const { accessToken, refreshToken } = authData;
-        const payload = jwtDecode<Payload>(accessToken);
+const AuthTokensStore = create<TokensState>()((set) => ({
+  ...defaultTokens,
+  setAuthData: (authData: AuthData) => {
+    const { accessToken } = authData;
+    const payload = jwtDecode<Payload>(accessToken);
 
-        const JWTpayload = {
-          ...payload,
-          ...payload.hasura,
-        };
-        delete JWTpayload.hasura;
+    const JWTpayload = {
+      ...payload,
+      ...payload.hasura,
+    };
+    delete JWTpayload.hasura;
 
-        const newData = {
-          refreshToken,
-          accessToken,
-          JWTpayload,
-        } as TokensState;
-
-        set(newData);
-      },
-      cleanTokens: () => set({ ...defaultTokens }),
-    }),
-    {
-      name: "tokens",
-      getStorage: () => localStorage,
-    }
-  )
-);
+    set({
+      accessToken,
+      JWTpayload,
+    } as TokensState);
+  },
+  cleanTokens: () => set({ ...defaultTokens }),
+}));
 
 export default AuthTokensStore;
