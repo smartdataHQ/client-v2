@@ -10,19 +10,32 @@ export default [
         component: "./pages/Callback",
       },
       {
+        path: paths.SIGNIN,
+        component: "./pages/SignIn",
+      },
+      {
+        path: paths.SIGNUP,
+        component: "./pages/SignUp",
+      },
+      {
+        path: paths.LOGOUT,
+        component: "./pages/Logout",
+      },
+      // Legacy auth paths redirect to new paths
+      {
         path: paths.AUTH,
         routes: [
           {
-            path: paths.SIGNUP,
-            component: "./pages/SignUp",
+            path: `${paths.AUTH}/signup`,
+            redirect: paths.SIGNUP,
           },
           {
-            path: paths.SIGNIN,
-            component: "./pages/SignIn",
+            path: `${paths.AUTH}/signin`,
+            redirect: paths.SIGNIN,
           },
           {
-            path: paths.LOGOUT,
-            component: "./pages/Logout",
+            path: `${paths.AUTH}/logout`,
+            redirect: paths.LOGOUT,
           },
           {
             redirect: paths.SIGNIN,
