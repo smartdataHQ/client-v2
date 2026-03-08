@@ -20,6 +20,7 @@ import DataModelGeneration from "@/components/DataModelGeneration";
 import SmartGeneration from "@/components/SmartGeneration";
 import VersionsList from "@/components/VersionsList";
 import NoDataSource from "@/components/NoDataSource";
+import { parseProvenance } from "@/utils/provenanceParser";
 import { getSourceAndBranch } from "@/pages/Explore";
 import useLocation from "@/hooks/useLocation";
 import useModelsIde from "@/hooks/useModelsIde";
@@ -96,6 +97,7 @@ interface ModelsProps {
   onConnect: () => void;
   versionsCount?: number;
   onVersionsOpen?: () => void;
+  onReprofile?: (schema: Dataschema) => void;
 }
 
 export const Models: React.FC<ModelsProps> = ({
@@ -136,6 +138,7 @@ export const Models: React.FC<ModelsProps> = ({
   onConnect,
   versionsCount,
   onVersionsOpen,
+  onReprofile,
 }) => {
   const { t } = useTranslation(["pages", "models"]);
   const windowSize = useResponsive();
@@ -244,6 +247,7 @@ export const Models: React.FC<ModelsProps> = ({
             dataSourceId={dataSource?.id}
             versionsCount={versionsCount}
             onVersionsOpen={onVersionsOpen}
+            onReprofile={onReprofile}
           />
         </Spin>
       }
@@ -577,6 +581,11 @@ const ModelsWrapper: React.FC = () => {
     onModalClose(true);
   };
 
+  const onReprofile = (schema: Dataschema) => {
+    // Navigate to smart gen modal — the SmartGeneration component will handle the flow
+    setLocation(`${basePath}/${curSource?.id}/${currentBranch?.id}/smartgen`);
+  };
+
   const fetching =
     version?.fetching ||
     deleteMutation.fetching ||
@@ -907,6 +916,7 @@ const ModelsWrapper: React.FC = () => {
           `${basePath}/${curSource?.id}/${currentBranch?.id}/versions`
         )
       }
+      onReprofile={isClickHouse ? onReprofile : undefined}
     />
   );
 };

@@ -1,5 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Alert, Progress, Radio, Select, Space, Spin, Typography } from "antd";
+import {
+  Alert,
+  Checkbox,
+  Input as AntInput,
+  Progress,
+  Radio,
+  Select,
+  Space,
+  Spin,
+  Typography,
+} from "antd";
 import { useTranslation } from "react-i18next";
 
 import Button from "@/components/Button";
@@ -16,6 +26,12 @@ import type { FC } from "react";
 const { Title, Text } = Typography;
 
 type SmartGenStep = "select" | "profiling" | "preview" | "generating" | "done";
+
+interface ArrayJoinSelection {
+  column: string;
+  alias: string;
+  selected: boolean;
+}
 
 interface SmartGenerationProps {
   dataSource: DataSourceInfo;
@@ -37,6 +53,9 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   const [selectedSchema, setSelectedSchema] = useState<string>("");
   const [selectedTable, setSelectedTable] = useState<string>("");
   const [mergeStrategy, setMergeStrategy] = useState<string>("auto");
+  const [arrayJoinSelections, setArrayJoinSelections] = useState<
+    ArrayJoinSelection[]
+  >([]);
   const [error, setError] = useState<string | null>(null);
 
   const [profileResult, execProfile] = useProfileTableQuery({
@@ -66,6 +85,16 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       const profileData = profileResult.data.profile_table;
       if (profileData.existing_model?.suggested_merge_strategy) {
         setMergeStrategy(profileData.existing_model.suggested_merge_strategy);
+      }
+      // Initialize array join selections from candidates
+      if (profileData.array_candidates?.length) {
+        setArrayJoinSelections(
+          profileData.array_candidates.filter(Boolean).map((c) => ({
+            column: c!.column,
+            alias: c!.suggested_alias,
+            selected: false,
+          }))
+        );
       }
       setStep("preview");
     }
@@ -111,12 +140,19 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     setStep("generating");
     setError(null);
 
+    const selectedArrayJoins = arrayJoinSelections
+      .filter((a) => a.selected)
+      .map((a) => ({ column: a.column, alias: a.alias }));
+
     const result = await execSmartGen({
       datasource_id: dataSource.id!,
       branch_id: branchId,
       table_name: selectedTable,
       table_schema: selectedSchema,
       merge_strategy: mergeStrategy,
+      array_join_columns: selectedArrayJoins.length
+        ? selectedArrayJoins
+        : undefined,
     });
 
     if (result.error) {
@@ -132,6 +168,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     selectedTable,
     selectedSchema,
     mergeStrategy,
+    arrayJoinSelections,
     execSmartGen,
   ]);
 
@@ -256,6 +293,56 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
               </Text>
             )}
           </div>
+
+          {arrayJoinSelections.length > 0 && (
+            <div style={{ margin: "16px 0" }}>
+              <Title level={5}>Array Columns (ARRAY JOIN)</Title>
+              <Text
+                type="secondary"
+                style={{ display: "block", marginBottom: 8 }}
+              >
+                Select array columns to flatten into separate queryable cubes.
+              </Text>
+              <Space direction="vertical" style={{ width: "100%" }}>
+                {arrayJoinSelections.map((aj, idx) => (
+                  <div
+                    key={aj.column}
+                    style={{ display: "flex", alignItems: "center", gap: 12 }}
+                  >
+                    <Checkbox
+                      checked={aj.selected}
+                      onChange={(e) => {
+                        const updated = [...arrayJoinSelections];
+                        updated[idx] = {
+                          ...updated[idx],
+                          selected: e.target.checked,
+                        };
+                        setArrayJoinSelections(updated);
+                      }}
+                    >
+                      {aj.column}
+                    </Checkbox>
+                    {aj.selected && (
+                      <AntInput
+                        size="small"
+                        style={{ width: 200 }}
+                        addonBefore="as"
+                        value={aj.alias}
+                        onChange={(e) => {
+                          const updated = [...arrayJoinSelections];
+                          updated[idx] = {
+                            ...updated[idx],
+                            alias: e.target.value,
+                          };
+                          setArrayJoinSelections(updated);
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </Space>
+            </div>
+          )}
 
           {profileData.existing_model && (
             <div className={styles.existingModelWarning}>
