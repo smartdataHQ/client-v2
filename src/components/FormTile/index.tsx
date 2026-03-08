@@ -1,4 +1,4 @@
-import { Card } from "antd";
+import { Card, Tag } from "antd";
 import cn from "classnames";
 
 import styles from "./index.module.less";
@@ -11,6 +11,7 @@ interface FormTileProps {
   icon: ReactNode;
   onClick?: (title: string) => void;
   active?: boolean;
+  deprecated?: boolean;
 }
 
 const FormTile: FC<FormTileProps> = ({
@@ -19,6 +20,7 @@ const FormTile: FC<FormTileProps> = ({
   icon,
   onClick,
   active = false,
+  deprecated = false,
 }) => {
   return (
     <div className={styles.wrapper} style={{ width }}>
@@ -29,6 +31,22 @@ const FormTile: FC<FormTileProps> = ({
         onClick={() => onClick?.(title)}
         hoverable
       >
+        {deprecated && (
+          <Tag
+            color="warning"
+            style={{
+              position: "absolute",
+              top: 4,
+              right: 4,
+              fontSize: 10,
+              margin: 0,
+              lineHeight: "16px",
+              padding: "0 4px",
+            }}
+          >
+            Deprecated
+          </Tag>
+        )}
         <div
           className={cn(styles.iconWrapper, {
             [styles.active]: active,

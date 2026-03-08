@@ -47,7 +47,7 @@ const DataSourceSetup: FC<DataSourceSetupProps> = ({
 
   const windowSize = useResponsive();
 
-  const { control, handleSubmit } = useForm<DataSourceSetupForm>({
+  const { control, handleSubmit, watch } = useForm<DataSourceSetupForm>({
     values: initialValue,
   });
 
@@ -86,6 +86,14 @@ const DataSourceSetup: FC<DataSourceSetupProps> = ({
             {fields.map((f) => {
               const name = f.name.split(".")[1];
               const defaultValue = initialValue?.db_params?.[name];
+
+              if (f.dependsOn) {
+                const depValue = watch(f.dependsOn.field as any);
+                if (depValue !== f.dependsOn.value) {
+                  return null;
+                }
+              }
+
               return (
                 <Col key={f.name} xs={24} sm={12}>
                   <Input
@@ -96,6 +104,10 @@ const DataSourceSetup: FC<DataSourceSetupProps> = ({
                     placeholder={getPlaceholder(f.placeholder)}
                     label={getLabel(f.label)}
                     defaultValue={defaultValue}
+                    options={f.options?.map((o) => ({
+                      label: o.label,
+                      value: o.value,
+                    }))}
                   />
                 </Col>
               );
