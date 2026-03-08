@@ -2,7 +2,7 @@ import { Layout, Row, Col, Typography } from "antd";
 import { useResponsive } from "ahooks";
 import cx from "classnames";
 
-import logo from "@/assets/logo_with_text.png";
+const logo = "/FraioS-logo-lighttheme.svg";
 
 import styles from "./index.module.less";
 

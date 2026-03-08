@@ -2,7 +2,7 @@
   display: flex;
   justify-content: start;
   min-height: 100%;
-  background: #f9f9f9;
+  background: rgba(249, 249, 249, 0.6);
 }
 
 .inner {
@@ -19,7 +19,10 @@
   padding: 13px 0;
   overflow: hidden;
   text-align: center;
-  background: var(--color-primary);
+  background: rgba(63, 101, 135, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 
   &.mobile {
     width: auto;
@@ -49,7 +52,7 @@
   margin-bottom: 20px;
   padding: 13px 12px;
   color: var(--color-white) !important;
-  font-family: var(--font-manrope);
+  font-family: var(--font-inter);
   text-align: center;
   background: rgba(255, 255, 255, 0.02);
   border-radius: 14px;
@@ -76,7 +79,7 @@
   margin: 0;
   padding: 0;
   font-weight: 700;
-  font-family: var(--font-manrope);
+  font-family: var(--font-inter);
 }
 
 .link {

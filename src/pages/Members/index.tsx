@@ -96,7 +96,7 @@ export const Members: React.FC<MembersProps> = ({
               {member.displayName}
             </Paragraph>
             {member.user_id === userId && (
-              <Tag className={styles.tag} color="#EDE7F0">
+              <Tag className={styles.tag} color="#E0EAF0">
                 {t("common:words.current")}
               </Tag>
             )}

@@ -1,8 +1,8 @@
 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g id="Chart">
-<rect id="Rectangle 2" x="1.50146" y="1.5" width="15" height="15" rx="3.75" stroke="#470D69" stroke-width="1.125"/>
-<path id="Line" d="M6.00195 12.7495L6.00195 10.4995" stroke="#470D69" stroke-width="1.125" stroke-linecap="round" stroke-linejoin="round"/>
-<path id="Line_2" d="M9.00244 12.7495L9.00244 5.24951" stroke="#470D69" stroke-width="1.125" stroke-linecap="round" stroke-linejoin="round"/>
-<path id="Line_3" d="M12.0024 12.7495L12.0024 7.49951" stroke="#470D69" stroke-width="1.125" stroke-linecap="round" stroke-linejoin="round"/>
+<rect id="Rectangle 2" x="1.50146" y="1.5" width="15" height="15" rx="3.75" stroke="#3f6587" stroke-width="1.125"/>
+<path id="Line" d="M6.00195 12.7495L6.00195 10.4995" stroke="#3f6587" stroke-width="1.125" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Line_2" d="M9.00244 12.7495L9.00244 5.24951" stroke="#3f6587" stroke-width="1.125" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Line_3" d="M12.0024 12.7495L12.0024 7.49951" stroke="#3f6587" stroke-width="1.125" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </svg>

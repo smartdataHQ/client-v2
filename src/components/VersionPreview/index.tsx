@@ -47,7 +47,7 @@ const VersionPreview: FC<VersionPreviewProps> = ({
           <Tooltip title={t("common:words.versions")}>
             <Badge
               count={count}
-              color="#A31BCB"
+              color="#4a7faa"
               style={{
                 fontSize: 8,
               }}
