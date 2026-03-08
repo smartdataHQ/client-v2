@@ -23,6 +23,10 @@ import Materialize from "@/assets/databases/materialize.svg";
 import Vertica from "@/assets/databases/vertica.svg";
 import Athena from "@/assets/databases/athena.svg";
 import Hive from "@/assets/databases/hive.svg";
+import DuckDB from "@/assets/databases/duckdb.svg";
+import Oracle from "@/assets/databases/oracle.svg";
+import SQLite from "@/assets/databases/sqlite.svg";
+import Pinot from "@/assets/databases/pinot.svg";
 
 export const dataSourcesMock: DataSourceInfo[] = [
   {
@@ -128,7 +132,12 @@ export const dbTiles = [
   { name: "Trino", value: "trino", icon: <Trino /> },
   { name: "MSSQL", value: "mssql", icon: <Mssql /> },
   { name: "DRUID", value: "druid", icon: <Druid /> },
-  { name: "ElasticSearch", value: "elasticsearch", icon: <Elasticsearch /> },
+  {
+    name: "ElasticSearch",
+    value: "elasticsearch",
+    icon: <Elasticsearch />,
+    deprecated: true,
+  },
   { name: "PrestoDB", value: "prestodb", icon: <Presto /> },
   { name: "Databricks", value: "databricks-jdbc", icon: <Databricks /> },
   { name: "Firebolt", value: "firebolt", icon: <Firebolt /> },
@@ -141,6 +150,10 @@ export const dbTiles = [
   { name: "Vertica", value: "vertica", icon: <Vertica /> },
   { name: "Athena", value: "athena", icon: <Athena /> },
   { name: "Hive", value: "hive", icon: <Hive /> },
+  { name: "DuckDB", value: "duckdb", icon: <DuckDB /> },
+  { name: "Oracle", value: "oracle", icon: <Oracle /> },
+  { name: "SQLite", value: "sqlite", icon: <SQLite /> },
+  { name: "Apache Pinot", value: "pinot", icon: <Pinot /> },
 ];
 
 export const defaultForm: DataSoureSetupField[] = [
@@ -479,6 +492,16 @@ export const dataSourceForms: Form = {
       type: "text",
     },
     {
+      name: "db_params.authMethod",
+      label: "authentication_method",
+      type: "radio",
+      value: "password",
+      options: [
+        { label: "Username/Password", value: "password" },
+        { label: "OAuth Token", value: "oauth" },
+      ],
+    },
+    {
       name: "db_params.username",
       label: "username",
       rules: {
@@ -486,6 +509,7 @@ export const dataSourceForms: Form = {
       },
       placeholder: "user",
       type: "text",
+      dependsOn: { field: "db_params.authMethod", value: "password" },
     },
     {
       name: "db_params.password",
@@ -495,6 +519,17 @@ export const dataSourceForms: Form = {
       },
       placeholder: "pass",
       type: "password",
+      dependsOn: { field: "db_params.authMethod", value: "password" },
+    },
+    {
+      name: "db_params.oauthToken",
+      label: "oauth_token",
+      rules: {
+        required: true,
+      },
+      placeholder: "OAuth token",
+      type: "password",
+      dependsOn: { field: "db_params.authMethod", value: "oauth" },
     },
     {
       name: "db_params.role",
@@ -607,12 +642,43 @@ export const dataSourceForms: Form = {
   ],
   "databricks-jdbc": [
     {
+      name: "db_params.authMethod",
+      label: "authentication_method",
+      type: "radio",
+      value: "pat",
+      options: [
+        { label: "Personal Access Token", value: "pat" },
+        { label: "OAuth Service Principal", value: "oauth" },
+      ],
+    },
+    {
       name: "db_params.token",
       label: "access_token",
       rules: {
         required: true,
       },
       type: "text",
+      dependsOn: { field: "db_params.authMethod", value: "pat" },
+    },
+    {
+      name: "db_params.oauthClientId",
+      label: "client_id",
+      rules: {
+        required: true,
+      },
+      placeholder: "OAuth Client ID",
+      type: "text",
+      dependsOn: { field: "db_params.authMethod", value: "oauth" },
+    },
+    {
+      name: "db_params.oauthClientSecret",
+      label: "client_secret",
+      rules: {
+        required: true,
+      },
+      placeholder: "OAuth Client Secret",
+      type: "password",
+      dependsOn: { field: "db_params.authMethod", value: "oauth" },
     },
     {
       name: "db_params.url",
@@ -665,6 +731,104 @@ export const dataSourceForms: Form = {
       },
       placeholder: "pass",
       type: "password",
+    },
+  ],
+  oracle: [
+    {
+      name: "db_params.host",
+      label: "host",
+      rules: {
+        required: true,
+      },
+      placeholder: "example.com",
+      type: "text",
+    },
+    {
+      name: "db_params.port",
+      label: "port",
+      rules: {
+        required: true,
+      },
+      placeholder: "1521",
+      type: "number",
+    },
+    {
+      name: "db_params.user",
+      label: "user",
+      rules: {
+        required: true,
+      },
+      placeholder: "db_username",
+      type: "text",
+    },
+    {
+      name: "db_params.password",
+      label: "password",
+      rules: {
+        required: true,
+      },
+      placeholder: "db_password",
+      type: "password",
+    },
+    {
+      name: "db_params.serviceName",
+      label: "service_name",
+      rules: {
+        required: true,
+      },
+      placeholder: "ORCL",
+      type: "text",
+    },
+  ],
+  sqlite: [
+    {
+      name: "db_params.database",
+      label: "database_file_path",
+      rules: {
+        required: true,
+      },
+      placeholder: "/path/to/database.db",
+      type: "text",
+    },
+  ],
+  pinot: [
+    {
+      name: "db_params.host",
+      label: "host",
+      rules: {
+        required: true,
+      },
+      placeholder: "example.com",
+      type: "text",
+    },
+    {
+      name: "db_params.port",
+      label: "port",
+      rules: {
+        required: true,
+      },
+      placeholder: "8099",
+      type: "number",
+    },
+    {
+      name: "db_params.schema",
+      label: "schema",
+      rules: {
+        required: false,
+      },
+      placeholder: "default",
+      type: "text",
+    },
+  ],
+  duckdb: [
+    {
+      name: "db_params.database",
+      label: "database_file_path",
+      rules: {
+        required: true,
+      },
+      placeholder: "/path/to/database.duckdb or md:database_name",
+      type: "text",
     },
   ],
   athena: [

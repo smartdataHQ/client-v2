@@ -77,6 +77,7 @@ const DataSourceSelection: FC<DataSourceSelectionProps> = ({
                   title={tile.name || ""}
                   icon={tile.icon}
                   active={initialValue?.value === tile.value}
+                  deprecated={tile.deprecated}
                   onClick={() => onSubmit?.(tile)}
                 />
               </Col>

@@ -15,15 +15,25 @@ export interface DataSource {
   icon?: ReactNode;
   value?: string;
   url?: string;
+  deprecated?: boolean;
 }
 
 export interface DataSoureSetupField {
   name: string;
   label: string;
-  type?: "text" | "checkbox" | "password" | "file" | "number";
+  type?:
+    | "text"
+    | "checkbox"
+    | "password"
+    | "file"
+    | "number"
+    | "radio"
+    | "select";
   rules?: object;
   value?: string;
   placeholder?: string;
+  options?: { label: string; value: string }[];
+  dependsOn?: { field: string; value: string };
 }
 
 export interface Column {
