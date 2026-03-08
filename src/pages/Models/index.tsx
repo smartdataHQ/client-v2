@@ -17,6 +17,7 @@ import StatusBadge from "@/components/StatusBadge";
 import SidebarLayout from "@/layouts/SidebarLayout";
 import Modal from "@/components/Modal";
 import DataModelGeneration from "@/components/DataModelGeneration";
+import SmartGeneration from "@/components/SmartGeneration";
 import VersionsList from "@/components/VersionsList";
 import NoDataSource from "@/components/NoDataSource";
 import { getSourceAndBranch } from "@/pages/Explore";
@@ -87,6 +88,8 @@ interface ModelsProps {
     } & Partial<Dataschema>)[]
   ) => void;
   onGenSubmit: (values: object, format: string) => void;
+  onSmartGenComplete: () => void;
+  smartGenModalVisible?: boolean;
   onDataSourceChange: (dataSource: DataSourceInfo | null) => void;
   sqlError?: object;
   dataSources?: DataSourceInfo[];
@@ -124,6 +127,8 @@ export const Models: React.FC<ModelsProps> = ({
   branchLoading,
   onModalClose,
   onGenSubmit,
+  onSmartGenComplete,
+  smartGenModalVisible,
   onSaveVersion,
   onDataSourceChange,
   dataSources,
@@ -268,21 +273,36 @@ export const Models: React.FC<ModelsProps> = ({
           </div>
 
           {dataSource && (
-            <Modal
-              open={!!genSchemaModalVisible}
-              onClose={onModalClose}
-              width={1004}
-            >
-              <DataModelGeneration
-                dataSource={dataSource!}
-                schema={tablesSchema}
-                isGenerate={true}
-                isOnboarding={false}
-                loading={schemaFetching}
-                onSubmit={onGenSubmit}
-                resetOnSubmit
-              />
-            </Modal>
+            <>
+              <Modal
+                open={!!genSchemaModalVisible}
+                onClose={onModalClose}
+                width={1004}
+              >
+                <DataModelGeneration
+                  dataSource={dataSource!}
+                  schema={tablesSchema}
+                  isGenerate={true}
+                  isOnboarding={false}
+                  loading={schemaFetching}
+                  onSubmit={onGenSubmit}
+                  resetOnSubmit
+                />
+              </Modal>
+              <Modal
+                open={!!smartGenModalVisible}
+                onClose={onModalClose}
+                width={720}
+              >
+                <SmartGeneration
+                  dataSource={dataSource!}
+                  schema={tablesSchema}
+                  branchId={currentBranch?.id || ""}
+                  onComplete={onSmartGenComplete}
+                  onCancel={onModalClose}
+                />
+              </Modal>
+            </>
           )}
           <Modal
             width={1004}
@@ -300,7 +320,7 @@ export const Models: React.FC<ModelsProps> = ({
   );
 };
 
-const reservedSlugs = ["sqlrunner", "genmodels", "docs"];
+const reservedSlugs = ["sqlrunner", "genmodels", "smartgen", "docs"];
 
 const ModelsWrapper: React.FC = () => {
   const { t } = useTranslation(["models", "common"]);
@@ -389,13 +409,19 @@ const ModelsWrapper: React.FC = () => {
   });
 
   const genSchemaModalVisible = slug === "genmodels";
+  const smartGenModalVisible = slug === "smartgen";
   const versionsModalVisible = slug === "versions";
 
   useEffect(() => {
-    if (genSchemaModalVisible && curSource?.id) {
+    if ((genSchemaModalVisible || smartGenModalVisible) && curSource?.id) {
       execQueryTables();
     }
-  }, [curSource?.id, execQueryTables, genSchemaModalVisible]);
+  }, [
+    curSource?.id,
+    execQueryTables,
+    genSchemaModalVisible,
+    smartGenModalVisible,
+  ]);
 
   useCheckResponse(
     tablesData,
@@ -542,6 +568,12 @@ const ModelsWrapper: React.FC = () => {
 
     execVersionAll();
 
+    onModalClose(true);
+  };
+
+  const onSmartGenComplete = () => {
+    execVersionAll();
+    execQueryMeta({ id: curSource?.id, branch_id: currentBranch?.id });
     onModalClose(true);
   };
 
@@ -783,6 +815,8 @@ const ModelsWrapper: React.FC = () => {
     setLocation(`${basePath}/${ds?.id}/${getCurrentBranch(ds)}`);
   };
 
+  const isClickHouse = curSource?.type?.value?.toLowerCase() === "clickhouse";
+
   const ideMenu = [
     {
       key: "gen",
@@ -792,6 +826,18 @@ const ModelsWrapper: React.FC = () => {
           `${basePath}/${curSource?.id}/${currentBranch?.id}/genmodels`
         ),
     },
+    ...(isClickHouse
+      ? [
+          {
+            key: "smartgen",
+            label: "Smart Generate",
+            onClick: () =>
+              setLocation(
+                `${basePath}/${curSource?.id}/${currentBranch?.id}/smartgen`
+              ),
+          },
+        ]
+      : []),
     {
       key: "import",
       label: (
@@ -839,6 +885,7 @@ const ModelsWrapper: React.FC = () => {
       onRunSQL={onRunSQL}
       onCodeSave={onCodeSave}
       genSchemaModalVisible={genSchemaModalVisible}
+      smartGenModalVisible={smartGenModalVisible}
       versionsModalVisible={versionsModalVisible}
       data={sqlResult}
       validationError={validationError}
@@ -848,6 +895,7 @@ const ModelsWrapper: React.FC = () => {
       schemaFetching={tablesData?.fetching || genSchemaMutation?.fetching}
       onModalClose={() => onModalClose(true)}
       onGenSubmit={onGenSubmit}
+      onSmartGenComplete={onSmartGenComplete}
       onSaveVersion={createNewVersion}
       onDataSourceChange={onDataSourceChange}
       dataSources={teamData?.dataSources}

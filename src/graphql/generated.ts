@@ -34,6 +34,18 @@ export type Scalars = {
   uuid: { input: any; output: any };
 };
 
+export type ArrayCandidateOutput = {
+  __typename?: "ArrayCandidateOutput";
+  column: Scalars["String"]["output"];
+  element_type: Scalars["String"]["output"];
+  suggested_alias: Scalars["String"]["output"];
+};
+
+export type ArrayJoinInput = {
+  alias: Scalars["String"]["input"];
+  column: Scalars["String"]["input"];
+};
+
 /** Boolean expression to compare columns of type "Boolean". All fields are combined with logical 'AND'. */
 export type Boolean_Comparison_Exp = {
   _eq?: InputMaybe<Scalars["Boolean"]["input"]>;
@@ -57,6 +69,15 @@ export type CreateTeamOutput = {
   __typename?: "CreateTeamOutput";
   id?: Maybe<Scalars["uuid"]["output"]>;
   name?: Maybe<Scalars["String"]["output"]>;
+};
+
+export type ExistingModelInfo = {
+  __typename?: "ExistingModelInfo";
+  file_format: Scalars["String"]["output"];
+  file_name: Scalars["String"]["output"];
+  has_user_content: Scalars["Boolean"]["output"];
+  suggested_merge_strategy: Scalars["String"]["output"];
+  supports_reprofile: Scalars["Boolean"]["output"];
 };
 
 export type ExportDataModelsOutput = {
@@ -119,6 +140,30 @@ export type PreAggregationsOutput = {
   data: Scalars["json"]["output"];
 };
 
+export type ProfileTableOutput = {
+  __typename?: "ProfileTableOutput";
+  array_candidates?: Maybe<Array<Maybe<ArrayCandidateOutput>>>;
+  code: Scalars["String"]["output"];
+  columns?: Maybe<Array<Maybe<ProfiledColumnOutput>>>;
+  existing_model?: Maybe<ExistingModelInfo>;
+  primary_keys?: Maybe<Array<Maybe<Scalars["String"]["output"]>>>;
+  row_count?: Maybe<Scalars["Int"]["output"]>;
+  sample_size?: Maybe<Scalars["Int"]["output"]>;
+  sampled: Scalars["Boolean"]["output"];
+};
+
+export type ProfiledColumnOutput = {
+  __typename?: "ProfiledColumnOutput";
+  column_type: Scalars["String"]["output"];
+  has_values: Scalars["Boolean"]["output"];
+  lc_values?: Maybe<Scalars["jsonb"]["output"]>;
+  name: Scalars["String"]["output"];
+  raw_type: Scalars["String"]["output"];
+  unique_keys?: Maybe<Array<Maybe<Scalars["String"]["output"]>>>;
+  unique_values?: Maybe<Scalars["Int"]["output"]>;
+  value_type: Scalars["String"]["output"];
+};
+
 export type RunSourceQueryOutput = {
   __typename?: "RunSourceQueryOutput";
   result?: Maybe<Scalars["json"]["output"]>;
@@ -128,6 +173,15 @@ export type SendTestAlertOutput = {
   __typename?: "SendTestAlertOutput";
   error?: Maybe<Scalars["Boolean"]["output"]>;
   result?: Maybe<Scalars["json"]["output"]>;
+};
+
+export type SmartGenOutput = {
+  __typename?: "SmartGenOutput";
+  changed: Scalars["Boolean"]["output"];
+  code: Scalars["String"]["output"];
+  file_name?: Maybe<Scalars["String"]["output"]>;
+  message?: Maybe<Scalars["String"]["output"]>;
+  version_id?: Maybe<Scalars["uuid"]["output"]>;
 };
 
 export type SourceMetaOutput = {
@@ -176,6 +230,12 @@ export type String_Comparison_Exp = {
   _regex?: InputMaybe<Scalars["String"]["input"]>;
   /** does the column match the given SQL regular expression */
   _similar?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type UpdateTeamSettingsOutput = {
+  __typename?: "UpdateTeamSettingsOutput";
+  code: Scalars["String"]["output"];
+  message?: Maybe<Scalars["String"]["output"]>;
 };
 
 /** columns and relationships of "access_lists" */
@@ -1335,6 +1395,7 @@ export type Auth_Accounts = {
   /** An object relationship */
   user: Users;
   user_id: Scalars["uuid"]["output"];
+  workos_user_id?: Maybe<Scalars["String"]["output"]>;
 };
 
 /** columns and relationships of "auth.accounts" */
@@ -1491,6 +1552,7 @@ export type Auth_Accounts_Bool_Exp = {
   updated_at?: InputMaybe<Timestamptz_Comparison_Exp>;
   user?: InputMaybe<Users_Bool_Exp>;
   user_id?: InputMaybe<Uuid_Comparison_Exp>;
+  workos_user_id?: InputMaybe<String_Comparison_Exp>;
 };
 
 /** unique or primary key constraints on table "auth.accounts" */
@@ -1503,6 +1565,8 @@ export enum Auth_Accounts_Constraint {
   AccountsPkey = "accounts_pkey",
   /** unique or primary key constraint on columns "user_id" */
   AccountsUserIdKey = "accounts_user_id_key",
+  /** unique or primary key constraint on columns "workos_user_id" */
+  AccountsWorkosUserIdUnique = "accounts_workos_user_id_unique",
 }
 
 /** delete the field or element with specified path (for JSON arrays, negative integers count from the end) */
@@ -1542,6 +1606,7 @@ export type Auth_Accounts_Insert_Input = {
   updated_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   user?: InputMaybe<Users_Obj_Rel_Insert_Input>;
   user_id?: InputMaybe<Scalars["uuid"]["input"]>;
+  workos_user_id?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 /** aggregate max on columns */
@@ -1558,6 +1623,7 @@ export type Auth_Accounts_Max_Fields = {
   ticket_expires_at?: Maybe<Scalars["timestamptz"]["output"]>;
   updated_at?: Maybe<Scalars["timestamptz"]["output"]>;
   user_id?: Maybe<Scalars["uuid"]["output"]>;
+  workos_user_id?: Maybe<Scalars["String"]["output"]>;
 };
 
 /** order by max() on columns of table "auth.accounts" */
@@ -1573,6 +1639,7 @@ export type Auth_Accounts_Max_Order_By = {
   ticket_expires_at?: InputMaybe<Order_By>;
   updated_at?: InputMaybe<Order_By>;
   user_id?: InputMaybe<Order_By>;
+  workos_user_id?: InputMaybe<Order_By>;
 };
 
 /** aggregate min on columns */
@@ -1589,6 +1656,7 @@ export type Auth_Accounts_Min_Fields = {
   ticket_expires_at?: Maybe<Scalars["timestamptz"]["output"]>;
   updated_at?: Maybe<Scalars["timestamptz"]["output"]>;
   user_id?: Maybe<Scalars["uuid"]["output"]>;
+  workos_user_id?: Maybe<Scalars["String"]["output"]>;
 };
 
 /** order by min() on columns of table "auth.accounts" */
@@ -1604,6 +1672,7 @@ export type Auth_Accounts_Min_Order_By = {
   ticket_expires_at?: InputMaybe<Order_By>;
   updated_at?: InputMaybe<Order_By>;
   user_id?: InputMaybe<Order_By>;
+  workos_user_id?: InputMaybe<Order_By>;
 };
 
 /** response of any mutation on the table "auth.accounts" */
@@ -1651,6 +1720,7 @@ export type Auth_Accounts_Order_By = {
   updated_at?: InputMaybe<Order_By>;
   user?: InputMaybe<Users_Order_By>;
   user_id?: InputMaybe<Order_By>;
+  workos_user_id?: InputMaybe<Order_By>;
 };
 
 /** primary key columns input for table: auth.accounts */
@@ -1695,6 +1765,8 @@ export enum Auth_Accounts_Select_Column {
   UpdatedAt = "updated_at",
   /** column name */
   UserId = "user_id",
+  /** column name */
+  WorkosUserId = "workos_user_id",
 }
 
 /** select "auth_accounts_aggregate_bool_exp_bool_and_arguments_columns" columns of table "auth.accounts" */
@@ -1734,6 +1806,7 @@ export type Auth_Accounts_Set_Input = {
   ticket_expires_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   updated_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   user_id?: InputMaybe<Scalars["uuid"]["input"]>;
+  workos_user_id?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 /** Streaming cursor of the table "auth_accounts" */
@@ -1761,6 +1834,7 @@ export type Auth_Accounts_Stream_Cursor_Value_Input = {
   ticket_expires_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   updated_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   user_id?: InputMaybe<Scalars["uuid"]["input"]>;
+  workos_user_id?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 /** update columns of table "auth.accounts" */
@@ -1795,6 +1869,8 @@ export enum Auth_Accounts_Update_Column {
   UpdatedAt = "updated_at",
   /** column name */
   UserId = "user_id",
+  /** column name */
+  WorkosUserId = "workos_user_id",
 }
 
 export type Auth_Accounts_Updates = {
@@ -5318,6 +5394,7 @@ export type Mutation_Root = {
   invite_team_member?: Maybe<InviteTeamMemberOutput>;
   run_query?: Maybe<RunSourceQueryOutput>;
   send_test_alert?: Maybe<SendTestAlertOutput>;
+  smart_gen_dataschemas?: Maybe<SmartGenOutput>;
   /** update data of the table: "access_lists" */
   update_access_lists?: Maybe<Access_Lists_Mutation_Response>;
   /** update single row of the table: "access_lists" */
@@ -5482,6 +5559,7 @@ export type Mutation_Root = {
   update_team_roles_by_pk?: Maybe<Team_Roles>;
   /** update multiples rows of table: "team_roles" */
   update_team_roles_many?: Maybe<Array<Maybe<Team_Roles_Mutation_Response>>>;
+  update_team_settings?: Maybe<UpdateTeamSettingsOutput>;
   /** update data of the table: "teams" */
   update_teams?: Maybe<Teams_Mutation_Response>;
   /** update single row of the table: "teams" */
@@ -6133,6 +6211,17 @@ export type Mutation_RootSend_Test_AlertArgs = {
 };
 
 /** mutation root */
+export type Mutation_RootSmart_Gen_DataschemasArgs = {
+  array_join_columns?: InputMaybe<Array<InputMaybe<ArrayJoinInput>>>;
+  branch_id: Scalars["uuid"]["input"];
+  datasource_id: Scalars["uuid"]["input"];
+  max_map_keys?: InputMaybe<Scalars["Int"]["input"]>;
+  merge_strategy?: InputMaybe<Scalars["String"]["input"]>;
+  table_name: Scalars["String"]["input"];
+  table_schema: Scalars["String"]["input"];
+};
+
+/** mutation root */
 export type Mutation_RootUpdate_Access_ListsArgs = {
   _append?: InputMaybe<Access_Lists_Append_Input>;
   _delete_at_path?: InputMaybe<Access_Lists_Delete_At_Path_Input>;
@@ -6626,13 +6715,29 @@ export type Mutation_RootUpdate_Team_Roles_ManyArgs = {
 };
 
 /** mutation root */
+export type Mutation_RootUpdate_Team_SettingsArgs = {
+  settings: Scalars["jsonb"]["input"];
+  team_id: Scalars["uuid"]["input"];
+};
+
+/** mutation root */
 export type Mutation_RootUpdate_TeamsArgs = {
+  _append?: InputMaybe<Teams_Append_Input>;
+  _delete_at_path?: InputMaybe<Teams_Delete_At_Path_Input>;
+  _delete_elem?: InputMaybe<Teams_Delete_Elem_Input>;
+  _delete_key?: InputMaybe<Teams_Delete_Key_Input>;
+  _prepend?: InputMaybe<Teams_Prepend_Input>;
   _set?: InputMaybe<Teams_Set_Input>;
   where: Teams_Bool_Exp;
 };
 
 /** mutation root */
 export type Mutation_RootUpdate_Teams_By_PkArgs = {
+  _append?: InputMaybe<Teams_Append_Input>;
+  _delete_at_path?: InputMaybe<Teams_Delete_At_Path_Input>;
+  _delete_elem?: InputMaybe<Teams_Delete_Elem_Input>;
+  _delete_key?: InputMaybe<Teams_Delete_Key_Input>;
+  _prepend?: InputMaybe<Teams_Prepend_Input>;
   _set?: InputMaybe<Teams_Set_Input>;
   pk_columns: Teams_Pk_Columns_Input;
 };
@@ -7141,6 +7246,7 @@ export type Query_Root = {
   pinned_items_by_pk?: Maybe<Pinned_Items>;
   pre_aggregation_preview?: Maybe<PreAggregationPreviewOutput>;
   pre_aggregations?: Maybe<PreAggregationsOutput>;
+  profile_table?: Maybe<ProfileTableOutput>;
   /** An array relationship */
   reports: Array<Reports>;
   /** An aggregate relationship */
@@ -7578,6 +7684,13 @@ export type Query_RootPre_Aggregation_PreviewArgs = {
 
 export type Query_RootPre_AggregationsArgs = {
   datasource_id: Scalars["String"]["input"];
+};
+
+export type Query_RootProfile_TableArgs = {
+  branch_id: Scalars["uuid"]["input"];
+  datasource_id: Scalars["uuid"]["input"];
+  table_name: Scalars["String"]["input"];
+  table_schema: Scalars["String"]["input"];
 };
 
 export type Query_RootReportsArgs = {
@@ -10331,6 +10444,8 @@ export type Teams = {
   reports: Array<Reports>;
   /** An aggregate relationship */
   reports_aggregate: Reports_Aggregate;
+  /** Team-level admin configuration (partition, internal_tables) */
+  settings: Scalars["jsonb"]["output"];
   updated_at: Scalars["timestamptz"]["output"];
   /** An object relationship */
   user: Users;
@@ -10445,6 +10560,11 @@ export type TeamsReports_AggregateArgs = {
   where?: InputMaybe<Reports_Bool_Exp>;
 };
 
+/** columns and relationships of "teams" */
+export type TeamsSettingsArgs = {
+  path?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 /** aggregated selection of "teams" */
 export type Teams_Aggregate = {
   __typename?: "teams_aggregate";
@@ -10484,6 +10604,12 @@ export type Teams_Aggregate_Order_By = {
   min?: InputMaybe<Teams_Min_Order_By>;
 };
 
+/** append existing jsonb value of filtered columns with new jsonb value */
+export type Teams_Append_Input = {
+  /** Team-level admin configuration (partition, internal_tables) */
+  settings?: InputMaybe<Scalars["jsonb"]["input"]>;
+};
+
 /** input type for inserting array relation for remote table "teams" */
 export type Teams_Arr_Rel_Insert_Input = {
   data: Array<Teams_Insert_Input>;
@@ -10511,6 +10637,7 @@ export type Teams_Bool_Exp = {
   name?: InputMaybe<String_Comparison_Exp>;
   reports?: InputMaybe<Reports_Bool_Exp>;
   reports_aggregate?: InputMaybe<Reports_Aggregate_Bool_Exp>;
+  settings?: InputMaybe<Jsonb_Comparison_Exp>;
   updated_at?: InputMaybe<Timestamptz_Comparison_Exp>;
   user?: InputMaybe<Users_Bool_Exp>;
   user_id?: InputMaybe<Uuid_Comparison_Exp>;
@@ -10518,11 +10645,29 @@ export type Teams_Bool_Exp = {
 
 /** unique or primary key constraints on table "teams" */
 export enum Teams_Constraint {
+  /** unique or primary key constraint on columns  */
+  TeamsNameUnique = "teams_name_unique",
   /** unique or primary key constraint on columns "id" */
   TeamsPkey = "teams_pkey",
-  /** unique or primary key constraint on columns "user_id", "name" */
-  TeamsUserIdNameKey = "teams_user_id_name_key",
 }
+
+/** delete the field or element with specified path (for JSON arrays, negative integers count from the end) */
+export type Teams_Delete_At_Path_Input = {
+  /** Team-level admin configuration (partition, internal_tables) */
+  settings?: InputMaybe<Array<Scalars["String"]["input"]>>;
+};
+
+/** delete the array element with specified index (negative integers count from the end). throws an error if top level container is not an array */
+export type Teams_Delete_Elem_Input = {
+  /** Team-level admin configuration (partition, internal_tables) */
+  settings?: InputMaybe<Scalars["Int"]["input"]>;
+};
+
+/** delete key/value pair or string element. key/value pairs are matched based on their key value */
+export type Teams_Delete_Key_Input = {
+  /** Team-level admin configuration (partition, internal_tables) */
+  settings?: InputMaybe<Scalars["String"]["input"]>;
+};
 
 /** input type for inserting data into table "teams" */
 export type Teams_Insert_Input = {
@@ -10535,6 +10680,8 @@ export type Teams_Insert_Input = {
   members?: InputMaybe<Members_Arr_Rel_Insert_Input>;
   name?: InputMaybe<Scalars["String"]["input"]>;
   reports?: InputMaybe<Reports_Arr_Rel_Insert_Input>;
+  /** Team-level admin configuration (partition, internal_tables) */
+  settings?: InputMaybe<Scalars["jsonb"]["input"]>;
   updated_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   user?: InputMaybe<Users_Obj_Rel_Insert_Input>;
   user_id?: InputMaybe<Scalars["uuid"]["input"]>;
@@ -10612,6 +10759,7 @@ export type Teams_Order_By = {
   members_aggregate?: InputMaybe<Members_Aggregate_Order_By>;
   name?: InputMaybe<Order_By>;
   reports_aggregate?: InputMaybe<Reports_Aggregate_Order_By>;
+  settings?: InputMaybe<Order_By>;
   updated_at?: InputMaybe<Order_By>;
   user?: InputMaybe<Users_Order_By>;
   user_id?: InputMaybe<Order_By>;
@@ -10620,6 +10768,12 @@ export type Teams_Order_By = {
 /** primary key columns input for table: teams */
 export type Teams_Pk_Columns_Input = {
   id: Scalars["uuid"]["input"];
+};
+
+/** prepend existing jsonb value of filtered columns with new jsonb value */
+export type Teams_Prepend_Input = {
+  /** Team-level admin configuration (partition, internal_tables) */
+  settings?: InputMaybe<Scalars["jsonb"]["input"]>;
 };
 
 /** select columns of table "teams" */
@@ -10631,6 +10785,8 @@ export enum Teams_Select_Column {
   /** column name */
   Name = "name",
   /** column name */
+  Settings = "settings",
+  /** column name */
   UpdatedAt = "updated_at",
   /** column name */
   UserId = "user_id",
@@ -10641,6 +10797,8 @@ export type Teams_Set_Input = {
   created_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   id?: InputMaybe<Scalars["uuid"]["input"]>;
   name?: InputMaybe<Scalars["String"]["input"]>;
+  /** Team-level admin configuration (partition, internal_tables) */
+  settings?: InputMaybe<Scalars["jsonb"]["input"]>;
   updated_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   user_id?: InputMaybe<Scalars["uuid"]["input"]>;
 };
@@ -10658,6 +10816,8 @@ export type Teams_Stream_Cursor_Value_Input = {
   created_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   id?: InputMaybe<Scalars["uuid"]["input"]>;
   name?: InputMaybe<Scalars["String"]["input"]>;
+  /** Team-level admin configuration (partition, internal_tables) */
+  settings?: InputMaybe<Scalars["jsonb"]["input"]>;
   updated_at?: InputMaybe<Scalars["timestamptz"]["input"]>;
   user_id?: InputMaybe<Scalars["uuid"]["input"]>;
 };
@@ -10671,12 +10831,24 @@ export enum Teams_Update_Column {
   /** column name */
   Name = "name",
   /** column name */
+  Settings = "settings",
+  /** column name */
   UpdatedAt = "updated_at",
   /** column name */
   UserId = "user_id",
 }
 
 export type Teams_Updates = {
+  /** append existing jsonb value of filtered columns with new jsonb value */
+  _append?: InputMaybe<Teams_Append_Input>;
+  /** delete the field or element with specified path (for JSON arrays, negative integers count from the end) */
+  _delete_at_path?: InputMaybe<Teams_Delete_At_Path_Input>;
+  /** delete the array element with specified index (negative integers count from the end). throws an error if top level container is not an array */
+  _delete_elem?: InputMaybe<Teams_Delete_Elem_Input>;
+  /** delete key/value pair or string element. key/value pairs are matched based on their key value */
+  _delete_key?: InputMaybe<Teams_Delete_Key_Input>;
+  /** prepend existing jsonb value of filtered columns with new jsonb value */
+  _prepend?: InputMaybe<Teams_Prepend_Input>;
   /** sets the columns of the filtered rows to the given values */
   _set?: InputMaybe<Teams_Set_Input>;
   /** filter the rows which have to be updated */
@@ -12187,6 +12359,88 @@ export type RunSourceSqlQueryMutation = {
   } | null;
 };
 
+export type ProfileTableQueryVariables = Exact<{
+  datasource_id: Scalars["uuid"]["input"];
+  branch_id: Scalars["uuid"]["input"];
+  table_name: Scalars["String"]["input"];
+  table_schema: Scalars["String"]["input"];
+}>;
+
+export type ProfileTableQuery = {
+  __typename?: "query_root";
+  profile_table?: {
+    __typename?: "ProfileTableOutput";
+    code: string;
+    row_count?: number | null;
+    sampled: boolean;
+    sample_size?: number | null;
+    primary_keys?: Array<string | null> | null;
+    columns?: Array<{
+      __typename?: "ProfiledColumnOutput";
+      name: string;
+      raw_type: string;
+      column_type: string;
+      value_type: string;
+      has_values: boolean;
+      unique_values?: number | null;
+      unique_keys?: Array<string | null> | null;
+      lc_values?: any | null;
+    } | null> | null;
+    array_candidates?: Array<{
+      __typename?: "ArrayCandidateOutput";
+      column: string;
+      element_type: string;
+      suggested_alias: string;
+    } | null> | null;
+    existing_model?: {
+      __typename?: "ExistingModelInfo";
+      file_name: string;
+      file_format: string;
+      has_user_content: boolean;
+      supports_reprofile: boolean;
+      suggested_merge_strategy: string;
+    } | null;
+  } | null;
+};
+
+export type SmartGenDataSchemasMutationVariables = Exact<{
+  datasource_id: Scalars["uuid"]["input"];
+  branch_id: Scalars["uuid"]["input"];
+  table_name: Scalars["String"]["input"];
+  table_schema: Scalars["String"]["input"];
+  array_join_columns?: InputMaybe<
+    Array<InputMaybe<ArrayJoinInput>> | InputMaybe<ArrayJoinInput>
+  >;
+  max_map_keys?: InputMaybe<Scalars["Int"]["input"]>;
+  merge_strategy?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type SmartGenDataSchemasMutation = {
+  __typename?: "mutation_root";
+  smart_gen_dataschemas?: {
+    __typename?: "SmartGenOutput";
+    code: string;
+    message?: string | null;
+    version_id?: any | null;
+    file_name?: string | null;
+    changed: boolean;
+  } | null;
+};
+
+export type UpdateTeamSettingsMutationVariables = Exact<{
+  team_id: Scalars["uuid"]["input"];
+  settings: Scalars["jsonb"]["input"];
+}>;
+
+export type UpdateTeamSettingsMutation = {
+  __typename?: "mutation_root";
+  update_team_settings?: {
+    __typename?: "UpdateTeamSettingsOutput";
+    code: string;
+    message?: string | null;
+  } | null;
+};
+
 export type CreateExplorationMutationVariables = Exact<{
   object: Explorations_Insert_Input;
 }>;
@@ -13582,6 +13836,107 @@ export function useRunSourceSqlQueryMutation() {
     RunSourceSqlQueryMutationVariables
   >(RunSourceSqlQueryDocument);
 }
+export const ProfileTableDocument = gql`
+  query ProfileTable(
+    $datasource_id: uuid!
+    $branch_id: uuid!
+    $table_name: String!
+    $table_schema: String!
+  ) {
+    profile_table(
+      datasource_id: $datasource_id
+      branch_id: $branch_id
+      table_name: $table_name
+      table_schema: $table_schema
+    ) {
+      code
+      row_count
+      sampled
+      sample_size
+      columns {
+        name
+        raw_type
+        column_type
+        value_type
+        has_values
+        unique_values
+        unique_keys
+        lc_values
+      }
+      array_candidates {
+        column
+        element_type
+        suggested_alias
+      }
+      primary_keys
+      existing_model {
+        file_name
+        file_format
+        has_user_content
+        supports_reprofile
+        suggested_merge_strategy
+      }
+    }
+  }
+`;
+
+export function useProfileTableQuery(
+  options: Omit<Urql.UseQueryArgs<ProfileTableQueryVariables>, "query">
+) {
+  return Urql.useQuery<ProfileTableQuery, ProfileTableQueryVariables>({
+    query: ProfileTableDocument,
+    ...options,
+  });
+}
+export const SmartGenDataSchemasDocument = gql`
+  mutation SmartGenDataSchemas(
+    $datasource_id: uuid!
+    $branch_id: uuid!
+    $table_name: String!
+    $table_schema: String!
+    $array_join_columns: [ArrayJoinInput]
+    $max_map_keys: Int
+    $merge_strategy: String
+  ) {
+    smart_gen_dataschemas(
+      datasource_id: $datasource_id
+      branch_id: $branch_id
+      table_name: $table_name
+      table_schema: $table_schema
+      array_join_columns: $array_join_columns
+      max_map_keys: $max_map_keys
+      merge_strategy: $merge_strategy
+    ) {
+      code
+      message
+      version_id
+      file_name
+      changed
+    }
+  }
+`;
+
+export function useSmartGenDataSchemasMutation() {
+  return Urql.useMutation<
+    SmartGenDataSchemasMutation,
+    SmartGenDataSchemasMutationVariables
+  >(SmartGenDataSchemasDocument);
+}
+export const UpdateTeamSettingsDocument = gql`
+  mutation UpdateTeamSettings($team_id: uuid!, $settings: jsonb!) {
+    update_team_settings(team_id: $team_id, settings: $settings) {
+      code
+      message
+    }
+  }
+`;
+
+export function useUpdateTeamSettingsMutation() {
+  return Urql.useMutation<
+    UpdateTeamSettingsMutation,
+    UpdateTeamSettingsMutationVariables
+  >(UpdateTeamSettingsDocument);
+}
 export const CreateExplorationDocument = gql`
   mutation CreateExploration($object: explorations_insert_input!) {
     insert_explorations_one(object: $object) {
@@ -14297,6 +14652,7 @@ export const namedOperations = {
     FetchTables: "FetchTables",
     FetchMeta: "FetchMeta",
     CurrentDataSource: "CurrentDataSource",
+    ProfileTable: "ProfileTable",
     CurrentExploration: "CurrentExploration",
     Members: "Members",
     CurrentLog: "CurrentLog",
@@ -14326,6 +14682,8 @@ export const namedOperations = {
     DeleteDataSource: "DeleteDataSource",
     GenDataSchemas: "GenDataSchemas",
     RunSourceSQLQuery: "RunSourceSQLQuery",
+    SmartGenDataSchemas: "SmartGenDataSchemas",
+    UpdateTeamSettings: "UpdateTeamSettings",
     CreateExploration: "CreateExploration",
     GenSQL: "GenSQL",
     UpdateMember: "UpdateMember",
