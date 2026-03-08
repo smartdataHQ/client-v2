@@ -23,7 +23,7 @@ interface TeamsTableProps {
   onEdit: (team: Team) => void;
 }
 
-const AVATAR_COLORS = ["#000000", "#470D69", "#A31BCB"];
+const AVATAR_COLORS = ["#000000", "#3f6587", "#4a7faa"];
 
 const TeamsTable: FC<TeamsTableProps> = ({
   teams,
@@ -42,7 +42,7 @@ const TeamsTable: FC<TeamsTableProps> = ({
         <Space className={cn(styles.cell, styles.nameCell)} size={10}>
           {value}
           {record.id === currentTeam?.id && (
-            <Tag className={styles.tag} color="#EDE7F0">
+            <Tag className={styles.tag} color="#E0EAF0">
               {t("common:words.current")}
             </Tag>
           )}

@@ -1,23 +1,23 @@
-<p align="center"><a href="https://synmetrix.org"><img src="https://github.com/mlcraft-io/client-v2/blob/master/src/assets/logo_with_text.png" alt="Synmetrix" width="300px"></a></p>
+<p align="center"><a href="https://fraios.com"><img src="https://github.com/smartdataHQ/client-v2/blob/master/public/FraioS-logo-darktheme.svg" alt="FraiOS Semantic Layer" width="300px"></a></p>
 
-# Synmetrix Client
+# FraiOS Semantic Layer Client
 
-This is a client-side of the Synmetrix project!
+This is a client-side of the FraiOS Semantic Layer project!
 
 ## Requirements
 
 Before using the client-side of the project, ensure that you have the following components installed:
 
 - **NodeJS:** Version 20.8.1 or higher.
-- **Synmetrix Backend:** Ensure the [Synmetrix backend](https://github.com/mlcraft-io/mlcraft/) is properly set up and running.
+- **FraiOS Backend:** Ensure the [FraiOS backend](https://github.com/smartdataHQ/synmetrix/) is properly set up and running.
 
 ## Installation
 
 To install the client-side of the project, follow these steps:
 
 ```bash
-# Clone the Synmetrix Client repository
-git clone https://github.com/mlcraft-io/client-v2
+# Clone the FraiOS Semantic Layer Client repository
+git clone https://github.com/smartdataHQ/client-v2
 
 # Navigate to the project directory
 cd client-v2
@@ -29,15 +29,15 @@ yarn
 yarn start
 ```
 
-After completing these steps, open your web browser and go to [](http://localhost:8000) to access the Synmetrix client.
+After completing these steps, open your web browser and go to [](http://localhost:8000) to access the FraiOS Semantic Layer client.
 
 ## Usage
 
-For detailed guidance on utilizing the Synmetrix client and exploring its features, please consult the [Synmetrix Documentation](https://docs.synmetrix.org/).
+For detailed guidance on utilizing the FraiOS Semantic Layer client and exploring its features, please consult the [FraiOS Documentation](https://docs.fraios.com/).
 
 ## Storybook Integration
 
-Explore the interactive UI components and functionalities of the Synmetrix client using Storybook. Storybook provides a convenient environment to showcase and test UI components in isolation.
+Explore the interactive UI components and functionalities of the FraiOS Semantic Layer client using Storybook. Storybook provides a convenient environment to showcase and test UI components in isolation.
 
 To launch Storybook, use the following command:
 
@@ -48,7 +48,7 @@ Once the command is executed, navigate to [](http://localhost:6007)
 
 ## Code Linting
 
-Maintain code consistency and quality in the Synmetrix client by implementing linting. Follow these steps to configure linting in Visual Studio Code (VS Code):
+Maintain code consistency and quality in the FraiOS Semantic Layer client by implementing linting. Follow these steps to configure linting in Visual Studio Code (VS Code):
 
 ### Requirements:
 
@@ -85,7 +85,7 @@ For a detailed understanding of Conventional Commits, refer to the [Conventional
 
 ## Component Structure
 
-In the Synmetrix project, components follow a consistent structure to enhance maintainability and organization. Each component typically consists of the following files:
+In the FraiOS Semantic Layer project, components follow a consistent structure to enhance maintainability and organization. Each component typically consists of the following files:
 
 1. **index.tsx:**
    The main file containing the component's implementation. This file includes the React component code.
@@ -113,7 +113,7 @@ Here's an example directory structure for a component named `ExampleComponent`:
 
 ## Testing
 
-Ensure the reliability and correctness of the Synmetrix client by utilizing testing functionalities powered by Vitest. Vitest provides a robust testing framework to validate the behavior of your components and functionalities.
+Ensure the reliability and correctness of the FraiOS Semantic Layer client by utilizing testing functionalities powered by Vitest. Vitest provides a robust testing framework to validate the behavior of your components and functionalities.
 
 To run tests, use the following command:
 
@@ -125,13 +125,13 @@ Executing this command will initiate the testing suite, allowing you to assess t
 
 ## Build
 
-Efficiently build and package the Synmetrix client with the following commands:
+Efficiently build and package the FraiOS Semantic Layer client with the following commands:
 
 - **Build the Client:**
   ```bash
   yarn build
   ```
-  This command utilizes Vite to build the Synmetrix client.
+  This command utilizes Vite to build the FraiOS Semantic Layer client.
 
 - **Post-Build Tasks:**
   ```bash
@@ -151,6 +151,6 @@ Efficiently build and package the Synmetrix client with the following commands:
   ```
   This command previews the built client locally using Vite.
 
-Incorporate these commands into your workflow to streamline the build process and prepare the Synmetrix client for deployment.
+Incorporate these commands into your workflow to streamline the build process and prepare the FraiOS Semantic Layer client for deployment.
 
   

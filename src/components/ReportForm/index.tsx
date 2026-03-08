@@ -107,7 +107,7 @@ const ReportForm: FC<ReportFormProps> = ({
               <div className={styles.deliveryInput}>
                 <Input
                   starPosition="left"
-                  starColor="#A31BCB"
+                  starColor="#4a7faa"
                   label={`${capitalize(type)}:`}
                   control={control}
                   rules={{
@@ -149,7 +149,7 @@ const ReportForm: FC<ReportFormProps> = ({
                     validate: validate.cronExp,
                   }}
                   starPosition="left"
-                  starColor="#A31BCB"
+                  starColor="#4a7faa"
                   label={
                     <span>
                       {t("schedule")} (

@@ -1,5 +1,5 @@
 {
-  "name": "synmetrix-client",
+  "name": "fraios-semantic-layer",
   "version": "1.0.0",
   "scripts": {
     "build": "bunx --bun vite build",

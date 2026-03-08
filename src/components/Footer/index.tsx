@@ -25,7 +25,7 @@ const Footer: React.FC = () => {
               <Col xs={24} sm={24} md={12}>
                 <div className={styles.footerTitle} />
                 <div className={styles.footerText}>
-                  © 2023 Synmetrix. All rights reserved.
+                  © 2024 FraiOS. All rights reserved.
                 </div>
               </Col>
               <Col xs={24} sm={24} md={12} className={styles.footerContactUs}>
@@ -34,9 +34,9 @@ const Footer: React.FC = () => {
                   <span>
                     <a
                       className={styles.footerLink}
-                      href="mailto:hello@synmetrix.org"
+                      href="mailto:hello@fraios.com"
                     >
-                      hello@synmetrix.org
+                      hello@fraios.com
                     </a>
                   </span>
                   <div style={{ height: 10 }} />

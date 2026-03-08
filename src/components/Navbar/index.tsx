@@ -62,7 +62,7 @@ const Navbar: FC<NavbarProps> = ({
   const docs = (
     <Button
       className={styles.docs}
-      href="https://docs.synmetrix.org"
+      href="https://docs.fraios.com"
       target="_blank"
     >
       <Space size={10} align="start">

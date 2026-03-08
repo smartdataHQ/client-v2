@@ -196,7 +196,7 @@ const SideMenu: FC<SideMenuProps> = () => {
           <img
             className={cn(styles.logo, isMobile && styles.logoMobile)}
             alt=""
-            src="/logo_bg.png"
+            src="/FraioS-icon-lighttheme.svg"
           />
 
           <div className={styles.items}>{buttons}</div>

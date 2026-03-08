@@ -20,17 +20,17 @@ export const Default = Template.bind({});
 Default.args = {
   tag: {
     title: "tag1",
-    color: "#470D6999",
+    color: "#3f658799",
   },
   nested: [
     {
       title: "tag2",
-      color: "#470D6999",
+      color: "#3f658799",
       key: "tag2",
     },
     {
       title: "tag3",
-      color: "#470D6999",
+      color: "#3f658799",
       key: "tag3",
     },
   ],

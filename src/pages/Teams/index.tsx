@@ -41,7 +41,7 @@ interface TeamsProps {
   editId?: string;
 }
 
-const AVATAR_COLORS = ["#000000", "#470D69", "#A31BCB"];
+const AVATAR_COLORS = ["#000000", "#3f6587", "#4a7faa"];
 
 export const Teams: React.FC<TeamsProps> = ({
   userId,
@@ -91,7 +91,7 @@ export const Teams: React.FC<TeamsProps> = ({
           <>
             {team.name}
             {team.id === currentTeam?.id && (
-              <Tag className={styles.tag} color="#EDE7F0">
+              <Tag className={styles.tag} color="#E0EAF0">
                 {t("common:words.current")}
               </Tag>
             )}
