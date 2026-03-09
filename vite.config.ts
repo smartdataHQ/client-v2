@@ -7,7 +7,6 @@ import vitApp from "@vitjs/vit";
 import { visualizer } from "rollup-plugin-visualizer";
 import autoImport from "unplugin-auto-import/vite";
 import { defineConfig } from "vite";
-import vitePluginImp from "vite-plugin-imp";
 import windiCSS from "vite-plugin-windicss";
 import tsconfigPaths from "vite-tsconfig-paths";
 import svgx from "@svgx/vite-plugin-react";
@@ -67,14 +66,6 @@ export default defineConfig({
             "useLayoutEffect",
             "forwardRef",
           ],
-        },
-      ],
-    }),
-    vitePluginImp({
-      libList: [
-        {
-          libName: "antd",
-          style: (name) => `antd/es/${name}/style`,
         },
       ],
     }),

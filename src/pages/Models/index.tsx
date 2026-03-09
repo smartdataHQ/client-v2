@@ -20,7 +20,6 @@ import DataModelGeneration from "@/components/DataModelGeneration";
 import SmartGeneration from "@/components/SmartGeneration";
 import VersionsList from "@/components/VersionsList";
 import NoDataSource from "@/components/NoDataSource";
-import { parseProvenance } from "@/utils/provenanceParser";
 import { getSourceAndBranch } from "@/pages/Explore";
 import useLocation from "@/hooks/useLocation";
 import useModelsIde from "@/hooks/useModelsIde";
@@ -581,7 +580,7 @@ const ModelsWrapper: React.FC = () => {
     onModalClose(true);
   };
 
-  const onReprofile = (schema: Dataschema) => {
+  const onReprofile = (_schema: Dataschema) => {
     // Navigate to smart gen modal — the SmartGeneration component will handle the flow
     setLocation(`${basePath}/${curSource?.id}/${currentBranch?.id}/smartgen`);
   };

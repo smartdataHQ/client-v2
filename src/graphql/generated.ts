@@ -11780,6 +11780,7 @@ export type UserTeamFieldsFragment = {
   __typename?: "teams";
   id: any;
   name: string;
+  settings: any;
   created_at: any;
   updated_at: any;
   members: Array<{
@@ -11858,6 +11859,7 @@ export type CurrentUserQuery = {
         __typename?: "teams";
         id: any;
         name: string;
+        settings: any;
         created_at: any;
         updated_at: any;
         members: Array<{
@@ -11924,6 +11926,7 @@ export type SubCurrentUserSubscription = {
         __typename?: "teams";
         id: any;
         name: string;
+        settings: any;
         created_at: any;
         updated_at: any;
         members: Array<{
@@ -12969,6 +12972,7 @@ export const UserTeamFieldsFragmentDoc = gql`
   fragment UserTeamFields on teams {
     id
     name
+    settings
     created_at
     updated_at
     members(order_by: { updated_at: desc }) {

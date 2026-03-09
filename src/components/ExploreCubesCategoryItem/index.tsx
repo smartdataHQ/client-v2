@@ -1,7 +1,11 @@
 import cn from "classnames";
-import { Row, Col, Typography } from "antd";
+import { Row, Col, Typography, Tag, Tooltip } from "antd";
 
 import CategoryItemFilter from "@/components/ExploreCubesCategoryItemFilter";
+import {
+  isLookupKeyDimension,
+  isResolvedDimension,
+} from "@/utils/helpers/filterParamsResolver";
 import type { CubeMember } from "@/types/cube";
 
 import MemberString from "@/assets/member-string.svg";
@@ -53,6 +57,8 @@ const CategoryItem: FC<CategoryItemProps> = ({
     memberFormatIcons?.[member?.format || ""] ||
     memberTypeIcons?.[member?.type] ||
     memberTypeIcons.default;
+  const isLookup = isLookupKeyDimension(member);
+  const isResolved = isResolvedDimension(member);
 
   return (
     <div
@@ -79,6 +85,26 @@ const CategoryItem: FC<CategoryItemProps> = ({
             <div className={s.memberRow}>
               <div className={s.memberIcon}>{icon}</div>
               <a className={cn(s.member)}>{member.shortTitle}</a>
+              {isLookup && (
+                <Tooltip
+                  title={`Selector — values: ${(
+                    member.meta?.known_values || []
+                  ).join(", ")}`}
+                >
+                  <Tag color="purple" className={s.paramTag}>
+                    S
+                  </Tag>
+                </Tooltip>
+              )}
+              {isResolved && (
+                <Tooltip
+                  title={`Requires selector: ${member.meta?.resolved_by}`}
+                >
+                  <Tag color="purple" className={s.paramTag}>
+                    S
+                  </Tag>
+                </Tooltip>
+              )}
             </div>
           </Col>
           <CategoryItemFilter

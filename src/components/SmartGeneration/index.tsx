@@ -25,6 +25,40 @@ import type { FC } from "react";
 
 const { Title, Text } = Typography;
 
+/** Animated progress bar that cycles through status messages. */
+const SimulatedProgress: FC<{
+  messages: string[];
+  maxPercent?: number;
+  intervalMs?: number;
+}> = ({ messages, maxPercent = 95, intervalMs = 3000 }) => {
+  const [msgIdx, setMsgIdx] = useState(0);
+  const [percent, setPercent] = useState(5);
+
+  useEffect(() => {
+    const step = Math.floor(maxPercent / messages.length);
+    const timer = setInterval(() => {
+      setMsgIdx((prev) => Math.min(prev + 1, messages.length - 1));
+      setPercent((prev) => Math.min(prev + step, maxPercent));
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [messages.length, maxPercent, intervalMs]);
+
+  return (
+    <div className={styles.progressSection}>
+      <Spin spinning>
+        <div className={styles.progressStep}>{messages[msgIdx]}</div>
+        <Progress percent={percent} status="active" showInfo={false} />
+        <Text
+          type="secondary"
+          style={{ display: "block", marginTop: 8, fontSize: 12 }}
+        >
+          This may take a few minutes for large tables.
+        </Text>
+      </Spin>
+    </div>
+  );
+};
+
 type SmartGenStep = "select" | "profiling" | "preview" | "generating" | "done";
 
 interface ArrayJoinSelection {
@@ -243,14 +277,18 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
 
       {/* Step 2: Profiling in progress */}
       {step === "profiling" && (
-        <div className={styles.progressSection}>
-          <Spin spinning>
-            <div className={styles.progressStep}>
-              Analyzing table structure...
-            </div>
-            <Progress percent={50} status="active" showInfo={false} />
-          </Spin>
-        </div>
+        <SimulatedProgress
+          messages={[
+            "Discovering table schema...",
+            "Analyzing column types...",
+            "Profiling column statistics...",
+            "Detecting cardinality...",
+            "Probing low-cardinality values...",
+            "Finalizing profile...",
+          ]}
+          maxPercent={95}
+          intervalMs={3000}
+        />
       )}
 
       {/* Step 3: Profile preview */}
@@ -423,12 +461,16 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
 
       {/* Step 4: Generating */}
       {step === "generating" && (
-        <div className={styles.progressSection}>
-          <Spin spinning>
-            <div className={styles.progressStep}>Generating data model...</div>
-            <Progress percent={75} status="active" showInfo={false} />
-          </Spin>
-        </div>
+        <SimulatedProgress
+          messages={[
+            "Building cube definitions...",
+            "Generating YAML model...",
+            "Applying merge strategy...",
+            "Creating new version...",
+          ]}
+          maxPercent={95}
+          intervalMs={2000}
+        />
       )}
 
       {/* Step 5: Done */}
