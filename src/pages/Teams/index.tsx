@@ -301,7 +301,12 @@ const TeamsWrapper: React.FC = () => {
   };
 
   const onSelect = (id: string) => {
+    const isSwitch = currentTeam?.id && currentTeam.id !== id;
     setCurrentTeam(id);
+    // Clear the editId param when switching teams (the old team's edit ID is invalid)
+    if (isSwitch && editId) {
+      setLocation("/settings/teams");
+    }
   };
 
   const isLoading = useMemo(

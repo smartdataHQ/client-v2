@@ -18,6 +18,42 @@ import styles from "./index.module.less";
 import type { FC } from "react";
 import type { MenuProps } from "antd";
 
+/**
+ * Base paths whose sub-segments are team-scoped URL params (IDs).
+ * Only includes routes with :param placeholders in the route definition.
+ * Fixed paths like /settings/admin/* and /settings/info are NOT included.
+ */
+const TEAM_SCOPED_BASES = [
+  "/settings/sources",
+  "/settings/teams",
+  "/settings/members",
+  "/settings/sql-api",
+  "/settings/roles",
+  "/signals/alerts",
+  "/signals/reports",
+  "/logs/query",
+  "/explore",
+  "/models",
+  "/export",
+  "/docs",
+  "/onboarding",
+];
+
+/**
+ * Strip team-scoped URL params from a pathname, keeping the base section.
+ * e.g. "/settings/sources/abc-123/generate" → "/settings/sources"
+ *      "/explore/ds-id/exp-id" → "/explore"
+ *      "/settings/info" → "/settings/info" (unchanged, no params)
+ */
+function stripTeamScopedParams(pathname: string): string {
+  for (const base of TEAM_SCOPED_BASES) {
+    if (pathname === base || pathname.startsWith(base + "/")) {
+      return base;
+    }
+  }
+  return pathname;
+}
+
 interface NavItem {
   label: string;
   href: string;
@@ -51,8 +87,17 @@ const Navbar: FC<NavbarProps> = ({
   const { t } = useTranslation(["common"]);
 
   const onSelectTeam = (id: string) => {
+    const isSwitch = currentTeam?.id && currentTeam.id !== id;
     setCurrentTeam(id);
     setTeamsOpen(false);
+    if (isSwitch) {
+      // Stay on the same page section but strip team-scoped URL params
+      // (datasource IDs, model IDs, exploration IDs, etc.)
+      const basePath = stripTeamScopedParams(window.location.pathname);
+      if (basePath !== window.location.pathname) {
+        setLocation(basePath);
+      }
+    }
   };
 
   const onClick = (href: string) => {

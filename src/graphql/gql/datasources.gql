@@ -235,3 +235,10 @@ mutation UpdateTeamSettings($team_id: uuid!, $settings: jsonb!) {
     message
   }
 }
+
+mutation CopyDatasource($datasource_id: uuid!, $target_team_id: uuid!) {
+  copy_datasource(datasource_id: $datasource_id, target_team_id: $target_team_id) {
+    id
+    name
+  }
+}

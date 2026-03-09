@@ -108,6 +108,18 @@ export default [
                 path: paths.INFO,
                 component: "./pages/PersonalInfo",
               },
+              {
+                path: paths.ADMIN_TEAM_PROPERTIES,
+                component: "./pages/AdminTeamProperties",
+              },
+              {
+                path: paths.ADMIN_MEMBER_PROPERTIES,
+                component: "./pages/AdminMemberProperties",
+              },
+              {
+                path: paths.ADMIN_QUERY_RULES,
+                component: "./pages/AdminQueryRules",
+              },
             ],
           },
           {

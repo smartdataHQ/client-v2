@@ -4,6 +4,7 @@ import SidebarMenu from "@/components/SidebarMenu";
 import type { Location } from "@/hooks/useLocation";
 import SidebarLayout from "@/layouts/SidebarLayout";
 import type { SidebarMenuItem } from "@/mocks/sidebarMenu";
+import usePortalAdmin from "@/hooks/usePortalAdmin";
 import CurrentUserStore from "@/stores/CurrentUserStore";
 import { Roles } from "@/types/team";
 
@@ -33,6 +34,7 @@ const SettingsLayout: React.FC<SidebarLayoutProps> = ({
   const { t } = useTranslation(["pages"]);
   const splitedPath = (location?.pathname || "").split("/");
   const { currentTeam } = CurrentUserStore();
+  const { isPortalAdmin } = usePortalAdmin();
   const isMember = currentTeam?.role === Roles.member;
   const titleKey = splitedPath?.[2];
   const subKey = splitedPath?.[1];
@@ -75,6 +77,27 @@ const SettingsLayout: React.FC<SidebarLayoutProps> = ({
       href: "/settings/info",
       icon: <PersonalInfoIcon />,
     },
+    (isPortalAdmin && {
+      key: "admin-team-properties",
+      label: "Team Properties",
+      href: "/settings/admin/team-properties",
+      icon: <TeamsIcon />,
+    }) ||
+      null,
+    (isPortalAdmin && {
+      key: "admin-member-properties",
+      label: "Member Properties",
+      href: "/settings/admin/member-properties",
+      icon: <MembersIcon />,
+    }) ||
+      null,
+    (isPortalAdmin && {
+      key: "admin-query-rules",
+      label: "Query Rules",
+      href: "/settings/admin/query-rules",
+      icon: <RolesAndAccessIcon />,
+    }) ||
+      null,
   ].filter((item) => !!item?.key);
 
   const singalsMenuItems: SidebarMenuItem[] = [

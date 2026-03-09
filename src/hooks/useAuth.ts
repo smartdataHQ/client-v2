@@ -3,6 +3,7 @@ import AuthTokensStore from "@/stores/AuthTokensStore";
 type TokenResponse = {
   accessToken: string;
   userId: string;
+  teamId?: string | null;
   role: string;
 };
 

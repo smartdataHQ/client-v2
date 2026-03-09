@@ -13941,6 +13941,38 @@ export function useUpdateTeamSettingsMutation() {
     UpdateTeamSettingsMutationVariables
   >(UpdateTeamSettingsDocument);
 }
+export const CopyDatasourceDocument = gql`
+  mutation CopyDatasource($datasource_id: uuid!, $target_team_id: uuid!) {
+    copy_datasource(
+      datasource_id: $datasource_id
+      target_team_id: $target_team_id
+    ) {
+      id
+      name
+    }
+  }
+`;
+
+export type CopyDatasourceMutation = {
+  __typename?: "mutation_root";
+  copy_datasource?: {
+    __typename?: "CopyDatasourceOutput";
+    id?: string | null;
+    name?: string | null;
+  } | null;
+};
+
+export type CopyDatasourceMutationVariables = Exact<{
+  datasource_id: Scalars["uuid"]["input"];
+  target_team_id: Scalars["uuid"]["input"];
+}>;
+
+export function useCopyDatasourceMutation() {
+  return Urql.useMutation<
+    CopyDatasourceMutation,
+    CopyDatasourceMutationVariables
+  >(CopyDatasourceDocument);
+}
 export const CreateExplorationDocument = gql`
   mutation CreateExploration($object: explorations_insert_input!) {
     insert_explorations_one(object: $object) {

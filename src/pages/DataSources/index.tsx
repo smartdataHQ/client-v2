@@ -1,7 +1,16 @@
-import { Col, Dropdown, Row, Space, Spin } from "antd";
-import { SettingOutlined } from "@ant-design/icons";
+import {
+  Col,
+  Dropdown,
+  Modal as AntModal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  message,
+} from "antd";
+import { CopyOutlined, SettingOutlined } from "@ant-design/icons";
 import { useResponsive } from "ahooks";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "@vitjs/runtime";
 import { useTranslation } from "react-i18next";
 
@@ -13,13 +22,18 @@ import PageHeader from "@/components/PageHeader";
 import formatTime from "@/utils/helpers/formatTime";
 import DataSourceTag from "@/components/DataSourceTag";
 import ConfirmModal from "@/components/ConfirmModal";
-import { useDeleteDataSourceMutation } from "@/graphql/generated";
+import {
+  useDeleteDataSourceMutation,
+  useCopyDatasourceMutation,
+} from "@/graphql/generated";
 import useCheckResponse from "@/hooks/useCheckResponse";
 import useLocation from "@/hooks/useLocation";
 import useOnboarding from "@/hooks/useOnboarding";
+import usePortalAdmin from "@/hooks/usePortalAdmin";
 import CurrentUserStore from "@/stores/CurrentUserStore";
 import DataSourceStore from "@/stores/DataSourceStore";
 import { Roles } from "@/types/team";
+import type { Team } from "@/types/team";
 import type {
   DataSource,
   DataSourceInfo,
@@ -43,6 +57,10 @@ interface DataSourcesProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onGenerate?: (id: string) => void;
+  onCopyToTeam?: (datasourceId: string, targetTeamId: string) => void;
+  isPortalAdmin?: boolean;
+  allTeams?: Team[];
+  currentTeamId?: string;
 }
 
 export const DataSources = ({
@@ -58,11 +76,28 @@ export const DataSources = ({
   onDelete = () => {},
   onFinish = () => {},
   onGenerate = () => {},
+  onCopyToTeam,
+  isPortalAdmin = false,
+  allTeams = [],
+  currentTeamId,
 }: DataSourcesProps) => {
   const { t } = useTranslation(["settings", "pages"]);
   const [, setLocation] = useLocation();
   const { setStep, clean, setIsOnboarding } = DataSourceStore();
   const responsive = useResponsive();
+
+  const [copyModalDs, setCopyModalDs] = useState<string | null>(null);
+  const [targetTeamId, setTargetTeamId] = useState<string | null>(null);
+
+  const otherTeams = allTeams.filter((tm) => tm.id !== currentTeamId);
+
+  const handleCopyConfirm = () => {
+    if (copyModalDs && targetTeamId && onCopyToTeam) {
+      onCopyToTeam(copyModalDs, targetTeamId);
+    }
+    setCopyModalDs(null);
+    setTargetTeamId(null);
+  };
 
   const onOpen = () => {
     setIsOnboarding(true);
@@ -109,6 +144,14 @@ export const DataSources = ({
                     onClick: () =>
                       dataSource.id && onGenerateModel(dataSource.id),
                   },
+                  isPortalAdmin &&
+                    otherTeams.length > 0 && {
+                      key: "copy",
+                      icon: <CopyOutlined />,
+                      label: t("common:words.copy_to_team", "Copy to team"),
+                      onClick: () =>
+                        dataSource.id && setCopyModalDs(dataSource.id),
+                    },
                   {
                     key: "delete",
                     className: styles.deleteItem,
@@ -124,7 +167,7 @@ export const DataSources = ({
                       </ConfirmModal>
                     ),
                   },
-                ],
+                ].filter(Boolean) as any[],
               }}
             >
               <SettingOutlined key="setting" />
@@ -232,13 +275,44 @@ export const DataSources = ({
           shadow={false}
         />
       </Modal>
+
+      {isPortalAdmin && (
+        <AntModal
+          title={t("common:words.copy_to_team", "Copy to team")}
+          open={!!copyModalDs}
+          onOk={handleCopyConfirm}
+          onCancel={() => {
+            setCopyModalDs(null);
+            setTargetTeamId(null);
+          }}
+          okButtonProps={{ disabled: !targetTeamId }}
+        >
+          <p>
+            {t(
+              "settings:data_sources.copy_to_team_description",
+              "Select the team to copy this datasource connection to:"
+            )}
+          </p>
+          <Select
+            style={{ width: "100%" }}
+            placeholder={t("common:words.select_team", "Select a team")}
+            value={targetTeamId}
+            onChange={setTargetTeamId}
+            options={otherTeams.map((tm) => ({
+              label: tm.name,
+              value: tm.id,
+            }))}
+          />
+        </AntModal>
+      )}
     </>
   );
 };
 
 const DataSourcesWrapper = () => {
-  const { t } = useTranslation(["dataSourceStepForm"]);
-  const { currentTeam, loading, setLoading } = CurrentUserStore();
+  const { t } = useTranslation(["dataSourceStepForm", "settings", "common"]);
+  const { currentUser, currentTeam, loading, setLoading } = CurrentUserStore();
+  const { isPortalAdmin } = usePortalAdmin();
   const [, setLocation] = useLocation();
   const { editId, generate } = useParams();
 
@@ -268,10 +342,26 @@ const DataSourcesWrapper = () => {
   });
 
   const [deleteMutation, execDeleteMutation] = useDeleteDataSourceMutation();
+  const [copyMutation, execCopyMutation] = useCopyDatasourceMutation();
 
   useCheckResponse(deleteMutation, () => {}, {
     successMessage: t("datasource_deleted"),
   });
+
+  useCheckResponse(
+    copyMutation,
+    (data, err) => {
+      if (data)
+        message.success(
+          t(
+            "settings:data_sources.copy_success",
+            "Datasource copied successfully"
+          )
+        );
+      if (err) message.error(err.message);
+    },
+    { showMessage: false, showResponseMessage: false }
+  );
 
   const onFinish = useCallback(() => {
     let finishPath = modelsPath;
@@ -362,6 +452,13 @@ const DataSourcesWrapper = () => {
 
   const isMember = currentTeam?.role === Roles.member;
 
+  const onCopyToTeam = (datasourceId: string, targetTeamId: string) => {
+    execCopyMutation({
+      datasource_id: datasourceId,
+      target_team_id: targetTeamId,
+    });
+  };
+
   return (
     <DataSources
       defaultOpen={!!editId}
@@ -376,6 +473,10 @@ const DataSourcesWrapper = () => {
       onDataSourceSelect={onDataSourceSelect}
       onDataSourceSetupSubmit={onDatasourceSetup}
       onDataModelGenerationSubmit={onDataModelGeneration}
+      onCopyToTeam={isPortalAdmin ? onCopyToTeam : undefined}
+      isPortalAdmin={isPortalAdmin}
+      allTeams={currentUser.teams}
+      currentTeamId={currentTeam?.id}
     />
   );
 };
