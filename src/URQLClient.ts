@@ -84,11 +84,11 @@ export default () => {
           return utils.appendHeaders(operation, headers);
         },
         willAuthError: () => {
-          const expirationTimeInSeconds = (JWTpayload?.exp || 0) * 1000;
-          const now = new Date();
-          const isValid = expirationTimeInSeconds <= now.getTime();
+          // No payload yet — token fetch is in progress, don't trigger refreshAuth
+          if (!JWTpayload?.exp) return false;
 
-          return isValid;
+          const expirationMs = JWTpayload.exp * 1000;
+          return expirationMs <= Date.now();
         },
         didAuthError: (error: CombinedError) => {
           return error?.graphQLErrors?.some(

@@ -309,7 +309,7 @@ export default ({ editId }: Props) => {
                 ...prev.formState.step1,
               },
             },
-            branchId: currentBranch.id,
+            branchId: currentBranch?.id,
           } as Partial<DataSourceState>)
       );
     }

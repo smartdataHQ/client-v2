@@ -53,7 +53,13 @@ const CurrentUserStore = create<CurrentUser>((set, get) => ({
       localStorage.setItem(LAST_TEAM_ID_KEY, id);
     }
 
-    set({ currentTeam: team });
+    // Clear stale team data when switching teams so old datasources/members
+    // don't flash while new team data loads
+    const isSwitch = state.currentTeam && state.currentTeam.id !== id;
+    set({
+      currentTeam: team,
+      ...(isSwitch ? { teamData: null, loading: true } : {}),
+    });
   },
 }));
 

@@ -18,6 +18,7 @@ export interface GeneralInfo {
 interface GeneralInfoFormProps {
   initialValue?: GeneralInfo;
   onSubmit: (data: GeneralInfo) => void;
+  disabled?: boolean;
 }
 
 const { Title } = Typography;
@@ -25,6 +26,7 @@ const { Title } = Typography;
 const GeneralInfoForm: FC<GeneralInfoFormProps> = ({
   initialValue,
   onSubmit,
+  disabled = false,
 }) => {
   const { t } = useTranslation(["settings", "common"]);
 
@@ -42,10 +44,11 @@ const GeneralInfoForm: FC<GeneralInfoFormProps> = ({
         <Col span={24} md={12}>
           <Input
             control={control}
-            rules={{ required: true }}
+            rules={disabled ? {} : { required: true }}
             name="displayName"
             label={t("common:form.labels.full_name")}
             defaultValue={initialValue?.displayName}
+            disabled={disabled}
           />
         </Col>
 
@@ -54,24 +57,31 @@ const GeneralInfoForm: FC<GeneralInfoFormProps> = ({
             label={t("common:form.labels.email")}
             placeholder={t("common:form.placeholders.email")}
             control={control}
-            rules={{
-              required: true,
-              validate: (v: string) =>
-                validate.email(v) || t("common:form.errors.email"),
-            }}
+            rules={
+              disabled
+                ? {}
+                : {
+                    required: true,
+                    validate: (v: string) =>
+                      validate.email(v) || t("common:form.errors.email"),
+                  }
+            }
             name="email"
+            disabled={disabled}
           />
         </Col>
       </Row>
 
-      <Button
-        htmlType="submit"
-        size="large"
-        type="primary"
-        onClick={handleSubmit(onSubmit)}
-      >
-        {t("personal_info.general_info.update")}
-      </Button>
+      {!disabled && (
+        <Button
+          htmlType="submit"
+          size="large"
+          type="primary"
+          onClick={handleSubmit(onSubmit)}
+        >
+          {t("personal_info.general_info.update")}
+        </Button>
+      )}
     </Form>
   );
 };
