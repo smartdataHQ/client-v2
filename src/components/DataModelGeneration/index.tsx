@@ -36,6 +36,8 @@ interface DataModelGenerationProps {
   initialValue?: DynamicForm;
   loading?: boolean;
   resetOnSubmit?: boolean;
+  smartGenTables?: string[];
+  onSmartGenerate?: (schemaName: string, tableName: string) => void;
 }
 
 const options = [
@@ -54,6 +56,8 @@ const DataModelGeneration: FC<DataModelGenerationProps> = ({
   initialValue = {},
   loading = false,
   resetOnSubmit = false,
+  smartGenTables = [],
+  onSmartGenerate,
 }) => {
   const { t } = useTranslation(["dataModelGeneration", "common"]);
 
@@ -150,6 +154,8 @@ const DataModelGeneration: FC<DataModelGenerationProps> = ({
                         schema={filteredSchema}
                         path={s}
                         initialValue={initialValue}
+                        smartGenTables={smartGenTables}
+                        onSmartGenerate={onSmartGenerate}
                       />
                     </Panel>
                   );

@@ -1,7 +1,8 @@
 import { useResponsive } from "ahooks";
 import { useController } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { Checkbox } from "antd";
+import { Checkbox, Tooltip } from "antd";
+import { ThunderboltOutlined } from "@ant-design/icons";
 import cn from "classnames";
 
 import Button from "@/components/Button";
@@ -19,6 +20,8 @@ interface TableSelectionProps {
   type: string;
   control: Control<DynamicForm>;
   initialValue?: DynamicForm;
+  smartGenTables?: string[];
+  onSmartGenerate?: (schemaName: string, tableName: string) => void;
 }
 
 const TableSelection: FC<TableSelectionProps> = ({
@@ -27,6 +30,8 @@ const TableSelection: FC<TableSelectionProps> = ({
   control,
   initialValue,
   type,
+  smartGenTables = [],
+  onSmartGenerate,
 }) => {
   const windowSize = useResponsive();
   const { t } = useTranslation(["common"]);
@@ -93,6 +98,21 @@ const TableSelection: FC<TableSelectionProps> = ({
             >
               ({schema[path][tb].length}) {t("common:words.columns")}
             </span>
+            {smartGenTables.includes(tb) && onSmartGenerate && (
+              <Tooltip title="Smart Generate model for this table">
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<ThunderboltOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSmartGenerate(path, tb);
+                  }}
+                >
+                  Smart Generate
+                </Button>
+              </Tooltip>
+            )}
           </div>
         </div>
       ))}

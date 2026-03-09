@@ -28,6 +28,8 @@ describe("<Models />", () => {
     onModalClose: vi.fn(),
     onSaveVersion: vi.fn(),
     onGenSubmit: vi.fn(),
+    onSmartGenComplete: vi.fn(),
+    onDeleteBranch: vi.fn(),
     onDataSourceChange: vi.fn(),
     onConnect: vi.fn(),
   };

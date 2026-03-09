@@ -1,7 +1,8 @@
-import { useMemo, useState, useEffect, useReducer } from "react";
+import { useMemo, useState, useEffect, useReducer, useCallback } from "react";
 import { useDeepCompareEffect } from "ahooks";
 
 import useDataSourceMeta from "@/hooks/useDataSourcesMeta";
+import useFilterParams from "@/hooks/useFilterParams";
 import useAnalyticsQuery, {
   queryState,
   initialState,
@@ -122,6 +123,81 @@ export default ({ meta = [], explorationData, rawSql }: Props) => {
     playgroundState: currPlaygroundState,
   });
 
+  const { requiredParams } = useFilterParams({
+    availableQueryMembers: availableQueryMembers || {},
+    playgroundState: currPlaygroundState,
+  });
+
+  // Selector state: tracks chosen value for each FILTER_PARAMS lookup key.
+  // Selectors are NOT filters — they select which nested structure element to read
+  // (e.g. classification_type="Category" picks the Category row from the array).
+  // At query time, selector values are merged into the Cube.js filters array
+  // since that's how FILTER_PARAMS substitution works under the hood.
+  const [selectorValues, setSelectorValues] = useState<Record<string, string>>(
+    {}
+  );
+  const [selectorDirty, setSelectorDirty] = useState(false);
+
+  const setSelectorValue = useCallback(
+    (dimensionName: string, value: string) => {
+      setSelectorValues((prev) => ({ ...prev, [dimensionName]: value }));
+      setSelectorDirty(true);
+    },
+    []
+  );
+
+  // Auto-initialize selectors with first known value when new ones appear.
+  // indexOf() requires a real string value — the FILTER_PARAMS fallback (1=1)
+  // causes a ClickHouse type error, so selectors must always have a value set.
+  useEffect(() => {
+    if (requiredParams.length === 0) return;
+
+    setSelectorValues((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const param of requiredParams) {
+        if (!(param.name in next)) {
+          const knownValues = Array.isArray(param.meta?.known_values)
+            ? param.meta.known_values
+            : [];
+          next[param.name] = knownValues[0] || "";
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [requiredParams]);
+
+  // Clean up selector values for params that are no longer required
+  useEffect(() => {
+    const requiredNames = new Set(requiredParams.map((p) => p.name));
+    setSelectorValues((prev) => {
+      const next: Record<string, string> = {};
+      let changed = false;
+      for (const [key, val] of Object.entries(prev)) {
+        if (requiredNames.has(key)) {
+          next[key] = val;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [requiredParams]);
+
+  // Build the selector filters to merge into the query at execution time
+  const selectorFilters = useMemo(
+    () =>
+      requiredParams
+        .filter((p) => selectorValues[p.name])
+        .map((p) => ({
+          dimension: p.name,
+          operator: "equals" as const,
+          values: [selectorValues[p.name]],
+        })),
+    [requiredParams, selectorValues]
+  );
+
   const { rows, hitLimit, skippedMembers } = useExplorationData({
     explorationResult: dataset,
   });
@@ -167,16 +243,17 @@ export default ({ meta = [], explorationData, rawSql }: Props) => {
       pickKeys(queryStateKeys, currPlaygroundState)
     );
 
-    if (isQueryChanged !== isChanged) {
-      setChangedStatus(isChanged);
+    if (isQueryChanged !== (isChanged || selectorDirty)) {
+      setChangedStatus(isChanged || selectorDirty);
     }
-  }, [isQueryChanged, currPlaygroundState, exploration]);
+  }, [isQueryChanged, currPlaygroundState, exploration, selectorDirty]);
 
   useEffect(() => {
     const newState = exploration?.playground_state;
 
     if (newState) {
       doReset(newState as unknown as PlaygroundState);
+      setSelectorDirty(false);
     }
   }, [exploration?.playground_state, doReset]);
 
@@ -202,5 +279,11 @@ export default ({ meta = [], explorationData, rawSql }: Props) => {
     },
     settings,
     dispatchSettings,
+    selectors: {
+      requiredParams,
+      selectorValues,
+      setSelectorValue,
+      selectorFilters,
+    },
   };
 };
