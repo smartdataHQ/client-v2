@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   Table,
@@ -68,24 +68,21 @@ const AdminTeamProperties: React.FC = () => {
   const [, listTeams] = useMutation(LIST_ALL_TEAMS);
   const [, updateProperties] = useMutation(UPDATE_TEAM_PROPERTIES);
 
-  const fetchTeams = useCallback(
-    async (pageNum = 1, searchTerm = search) => {
-      setLoading(true);
-      const offset = (pageNum - 1) * 50;
-      const res = await listTeams({
-        limit: 50,
-        offset,
-        search: searchTerm || null,
-      });
-      const data = res.data?.list_all_teams;
-      if (data) {
-        setTeams(data.teams);
-        setTotal(data.total);
-      }
-      setLoading(false);
-    },
-    [listTeams, search]
-  );
+  const fetchTeams = async (pageNum = 1, searchTerm = "") => {
+    setLoading(true);
+    const offset = (pageNum - 1) * 50;
+    const res = await listTeams({
+      limit: 50,
+      offset,
+      search: searchTerm || null,
+    });
+    const data = res.data?.list_all_teams;
+    if (data) {
+      setTeams(data.teams);
+      setTotal(data.total);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     if (isPortalAdmin) fetchTeams(1, "");
@@ -107,7 +104,7 @@ const AdminTeamProperties: React.FC = () => {
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    fetchTeams(newPage);
+    fetchTeams(newPage, search);
   };
 
   const handleEdit = (team: TeamInfo) => {

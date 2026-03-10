@@ -14,6 +14,7 @@ fragment UserTeamFields on teams {
     id
     user_id
     member_roles {
+      id
       team_role
     }
     user {

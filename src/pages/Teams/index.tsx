@@ -1,6 +1,6 @@
-import { Col, Dropdown, Row, Space, Spin, Tag, message } from "antd";
+import { Col, Dropdown, Input, Row, Space, Spin, Tag, message } from "antd";
 import { useTranslation } from "react-i18next";
-import { SettingOutlined } from "@ant-design/icons";
+import { SearchOutlined, SettingOutlined } from "@ant-design/icons";
 import { useParams } from "@vitjs/runtime";
 
 import Modal from "@/components/Modal";
@@ -62,6 +62,17 @@ export const Teams: React.FC<TeamsProps> = ({
   const { t } = useTranslation(["teams", "pages"]);
 
   const [selectedTeam, setSelectedTeam] = useState<TeamSettingsForm>();
+  const [search, setSearch] = useState("");
+
+  const filteredTeams = useMemo(
+    () =>
+      search
+        ? teams.filter((tm) =>
+            tm.name.toLowerCase().includes(search.toLowerCase())
+          )
+        : teams,
+    [teams, search]
+  );
 
   const onEdit = (team: Team) => {
     onOpen(team.id);
@@ -233,11 +244,22 @@ export const Teams: React.FC<TeamsProps> = ({
           onClick={onCreate}
         />
 
+        {teams.length > 1 && (
+          <Input.Search
+            placeholder="Search teams..."
+            allowClear
+            enterButton={<SearchOutlined />}
+            onChange={(e) => setSearch(e.target.value)}
+            value={search}
+            style={{ maxWidth: 400 }}
+          />
+        )}
+
         <Spin spinning={loading}>
-          {teams.length ? (
+          {filteredTeams.length ? (
             <div className={styles.body}>
               <Row justify={"start"} gutter={[32, 32]}>
-                {teams?.map((tm) => (
+                {filteredTeams?.map((tm) => (
                   <Col xs={24} sm={12} xl={8} key={tm.id}>
                     {renderCard(tm)}
                   </Col>
@@ -251,7 +273,12 @@ export const Teams: React.FC<TeamsProps> = ({
       </Space>
 
       <Modal open={isOpen} closable onClose={onModalClose}>
-        <TeamSettings initialValue={selectedTeam} onSubmit={onSubmit} />
+        <TeamSettings
+          initialValue={selectedTeam}
+          onSubmit={onSubmit}
+          team={editId ? teams.find((tm) => tm.id === editId) : undefined}
+          isPortalAdmin={isPortalAdmin}
+        />
       </Modal>
     </>
   );
