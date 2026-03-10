@@ -16,6 +16,13 @@ import styles from "./index.module.less";
 
 import type { FC } from "react";
 
+interface CopyFromOption {
+  id: string;
+  name: string;
+  teamName: string;
+  dbType: string;
+}
+
 interface DataSourceFormProps {
   onFinish: () => void;
   onDataSourceSelect?: (data: DataSource) => void;
@@ -27,6 +34,8 @@ interface DataSourceFormProps {
   bordered?: boolean;
   loading?: boolean;
   shadow?: boolean;
+  copyFromOptions?: CopyFromOption[];
+  onCopyFrom?: (datasourceId: string) => void;
 }
 
 const DataSourceForm: FC<DataSourceFormProps> = ({
@@ -40,6 +49,8 @@ const DataSourceForm: FC<DataSourceFormProps> = ({
   bordered = true,
   loading = false,
   shadow = true,
+  copyFromOptions = [],
+  onCopyFrom,
 }) => {
   const { t } = useTranslation(["dataSourceStepForm"]);
   const { step } = DataSourceStore();
@@ -70,6 +81,8 @@ const DataSourceForm: FC<DataSourceFormProps> = ({
           onTestConnection={onTestConnection}
           onDataSourceSetupSubmit={onDataSourceSetupSubmit}
           onDataModelGenerationSubmit={onDataModelGenerationSubmit}
+          copyFromOptions={copyFromOptions}
+          onCopyFrom={onCopyFrom}
         />
       </Suspense>
     </Card>

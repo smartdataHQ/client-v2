@@ -70,6 +70,9 @@ export default [
                 path: `${paths.REPORTS}/:reportId?`,
                 component: "./pages/Reports",
               },
+              {
+                component: "./pages/404",
+              },
             ],
           },
           {
@@ -119,6 +122,9 @@ export default [
               {
                 path: paths.ADMIN_QUERY_RULES,
                 component: "./pages/AdminQueryRules",
+              },
+              {
+                component: "./pages/404",
               },
             ],
           },

@@ -20,6 +20,13 @@ import { MODELS } from "@/utils/constants/paths";
 
 import type { FC } from "react";
 
+interface CopyFromOption {
+  id: string;
+  name: string;
+  teamName: string;
+  dbType: string;
+}
+
 interface DataSourceFormBodyProps {
   activeStep?: number;
   formState?: FormState;
@@ -31,6 +38,8 @@ interface DataSourceFormBodyProps {
   onDataSourceSetupSubmit?: (data: DataSourceSetupForm) => void;
   onDataModelGenerationSubmit?: (data: DynamicForm) => void;
   onDataSourceSelect?: (value: DataSource) => void;
+  copyFromOptions?: CopyFromOption[];
+  onCopyFrom?: (datasourceId: string) => void;
 }
 
 const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
@@ -44,6 +53,8 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
   onDataSourceSetupSubmit = () => {},
   onDataModelGenerationSubmit = () => {},
   onDataSourceSelect = () => {},
+  copyFromOptions = [],
+  onCopyFrom,
 }) => {
   const {
     step,
@@ -100,6 +111,8 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
           onSubmit={onDataSourceSelect}
           initialValue={curDataSource}
           options={dbTiles}
+          copyFromOptions={copyFromOptions}
+          onCopyFrom={onCopyFrom}
         />
       );
     case 1:
@@ -162,6 +175,8 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
       initialValue={curDataSource}
       options={dbTiles}
       onSkip={onSkip}
+      copyFromOptions={copyFromOptions}
+      onCopyFrom={onCopyFrom}
     />
   );
 };
