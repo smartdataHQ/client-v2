@@ -44,6 +44,34 @@ type Headers = {
   Authorization: string;
 };
 
+const AUTH_ERROR_CODES = new Set([
+  "FORBIDDEN",
+  "INVALID_JWT",
+  "INVALID_HEADERS",
+  "JWT_MISSING_ROLE_CLAIMS",
+  "UNAUTHENTICATED",
+  "ACCESS-DENIED",
+]);
+
+function isAuthError(error: CombinedError) {
+  const responseStatus = error.response?.status;
+  if (responseStatus === 401 || responseStatus === 403) {
+    return true;
+  }
+
+  return error?.graphQLErrors?.some((e) => {
+    const code = String(e.extensions?.code || "").toUpperCase();
+    const message = String(e.message || "").toLowerCase();
+
+    return (
+      AUTH_ERROR_CODES.has(code) ||
+      message.includes("jwt") ||
+      message.includes("not authenticated") ||
+      message.includes("unauthorized")
+    );
+  });
+}
+
 export default () => {
   const { accessToken, JWTpayload, setAuthData, cleanTokens } =
     AuthTokensStore();
@@ -88,12 +116,10 @@ export default () => {
           if (!JWTpayload?.exp) return false;
 
           const expirationMs = JWTpayload.exp * 1000;
-          return expirationMs <= Date.now();
+          return expirationMs - Date.now() <= 60 * 1000;
         },
         didAuthError: (error: CombinedError) => {
-          return error?.graphQLErrors?.some(
-            (e) => e.extensions?.code === "FORBIDDEN"
-          );
+          return isAuthError(error);
         },
         refreshAuth: async () => {
           const result = await fetchToken();
@@ -102,7 +128,14 @@ export default () => {
             window.location.href = SIGNIN;
             return;
           }
-          setAuthData({ accessToken: result.accessToken });
+
+          const authAccepted = setAuthData({
+            accessToken: result.accessToken,
+          });
+          if (!authAccepted) {
+            cleanTokens();
+            window.location.href = SIGNIN;
+          }
         },
       })),
       retryExchange({

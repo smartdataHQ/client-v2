@@ -61,8 +61,7 @@ export default () => {
     const result = await fetchToken();
     if (!result) return false;
 
-    setAuthData({ accessToken: result.accessToken });
-    return true;
+    return setAuthData({ accessToken: result.accessToken });
   };
 
   return {
