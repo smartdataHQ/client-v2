@@ -1,4 +1,5 @@
 import useUserData from "@/hooks/useUserData";
+import PageLoading from "@/components/PageLoading";
 
 import type { ReactNode } from "react";
 
@@ -7,7 +8,11 @@ export type UserDataWrapperProps = {
 };
 
 const UserDataWapper: React.FC<UserDataWrapperProps> = ({ children }) => {
-  useUserData();
+  const { bootstrapping } = useUserData();
+
+  if (bootstrapping) {
+    return <PageLoading />;
+  }
 
   return <>{children}</>;
 };

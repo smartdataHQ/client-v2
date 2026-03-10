@@ -1,9 +1,9 @@
 export const HOME = "/";
 
 export const AUTH = "/userauth";
-export const SIGNUP = `${AUTH}/signup`;
-export const SIGNIN = `${AUTH}/signin`;
-export const LOGOUT = `${AUTH}/logout`;
+export const SIGNUP = "/signup";
+export const SIGNIN = "/signin";
+export const LOGOUT = "/logout";
 
 export const SIGNALS = "/signals";
 export const ALERTS = `${SIGNALS}/alerts`;
@@ -16,6 +16,10 @@ export const MEMBERS = `${SETTINGS}/members`;
 export const SQL_API = `${SETTINGS}/sql-api`;
 export const ROLES = `${SETTINGS}/roles`;
 export const INFO = `${SETTINGS}/info`;
+
+export const ADMIN_TEAM_PROPERTIES = `${SETTINGS}/admin/team-properties`;
+export const ADMIN_MEMBER_PROPERTIES = `${SETTINGS}/admin/member-properties`;
+export const ADMIN_QUERY_RULES = `${SETTINGS}/admin/query-rules`;
 
 export const DOCS = "/docs";
 export const MODELS = "/models";

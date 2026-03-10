@@ -199,7 +199,7 @@ const AlertForm: FC<AlertFormProps> = ({
               <div className={styles.deliveryInput}>
                 <Input
                   starPosition="left"
-                  starColor="#A31BCB"
+                  starColor="#4a7faa"
                   label={`${capitalize(type)}:`}
                   control={control}
                   rules={{
@@ -238,7 +238,7 @@ const AlertForm: FC<AlertFormProps> = ({
                 <Input
                   rules={{ required: true, validate: validate.cronExp }}
                   starPosition="left"
-                  starColor="#A31BCB"
+                  starColor="#4a7faa"
                   label={
                     <span>
                       {t("schedule")} (
@@ -294,7 +294,7 @@ const AlertForm: FC<AlertFormProps> = ({
                     validate: (val: number) => !isNaN(val) && val >= 0,
                   }}
                   starPosition="left"
-                  starColor="#A31BCB"
+                  starColor="#4a7faa"
                   className={styles.input}
                   label={t("form.request_timeout")}
                   control={control}
@@ -312,7 +312,7 @@ const AlertForm: FC<AlertFormProps> = ({
                     validate: (val: number) => !isNaN(val) && val >= 0,
                   }}
                   starPosition="left"
-                  starColor="#A31BCB"
+                  starColor="#4a7faa"
                   className={styles.input}
                   label={t("form.timeout_on_fire")}
                   control={control}

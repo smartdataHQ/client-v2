@@ -80,7 +80,7 @@ const ExploreFiltersSection: FC<ExploreFiltersSectionProps> = (props) => {
                 <Badge
                   count={state.filtersCount}
                   style={{
-                    backgroundColor: "#EDE7F0",
+                    backgroundColor: "#E0EAF0",
                     color: "rgba(0, 0, 0, 0.56)",
                     padding: "0 10px",
                   }}

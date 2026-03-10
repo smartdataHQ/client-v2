@@ -1,213 +1,72 @@
 import AuthTokensStore from "@/stores/AuthTokensStore";
-import type { SignInFormType } from "@/components/SignInForm";
-import type { SignUpFormType } from "@/components/SignUpForm";
 
-const VITE_GRAPHQL_PLUS_SERVER_URL =
-  window.GRAPHQL_PLUS_SERVER_URL !== undefined
-    ? window.GRAPHQL_PLUS_SERVER_URL
-    : import.meta.env.VITE_GRAPHQL_PLUS_SERVER_URL;
-
-type Response = {
-  statusCode?: number;
-  error?: string;
-  message?: string;
+type TokenResponse = {
+  accessToken: string;
+  userId: string;
+  teamId?: string | null;
+  role: string;
 };
 
-type AuthResponse = {
-  jwt_token: string;
-  refresh_token: string;
-  statusCode?: number;
-  error?: string;
-  message?: string;
-  magicLink?: boolean;
+type ErrorResponse = {
+  error: boolean;
+  code: string;
+  message: string;
 };
 
-export const validateResponse = async (response: any) => {
-  let data = {};
+export const fetchToken = async (): Promise<TokenResponse | null> => {
+  const response = await fetch("/auth/token", {
+    method: "GET",
+    credentials: "include",
+  });
 
-  try {
-    data = await response.json();
-  } catch (err) {
-    if (response.status === 204) {
-      console.log("HTTP status: ", response.status);
-      return {
-        statusCode: response.status,
-      };
-    }
-
-    return err;
+  if (!response.ok) {
+    return null;
   }
 
-  return data;
-};
-
-export const fetchRefreshToken = async (refreshToken: string) => {
-  const response = await fetch(
-    `${VITE_GRAPHQL_PLUS_SERVER_URL}/auth/token/refresh?refresh_token=${refreshToken}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  return (await validateResponse(response)) as AuthResponse;
+  return response.json();
 };
 
 export default () => {
-  const { refreshToken, accessToken, setAuthData } = AuthTokensStore();
+  const { setAuthData, cleanTokens } = AuthTokensStore();
 
-  const login = async (values: SignInFormType) => {
-    const response = await fetch(`${VITE_GRAPHQL_PLUS_SERVER_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...values,
-        cookie: false,
-      }),
-    });
+  const signIn = (provider?: string, email?: string) => {
+    const params = new URLSearchParams();
+    if (provider) params.set("provider", provider);
+    if (email) params.set("email", email);
 
-    const res = <AuthResponse>await validateResponse(response);
-
-    if (res.error) {
-      return {
-        error: res.error,
-        message: res.message,
-      };
+    const returnTo = window.location.pathname;
+    if (returnTo && returnTo !== "/signin" && returnTo !== "/signup") {
+      params.set("return_to", returnTo);
     }
 
-    if (res?.jwt_token && res?.refresh_token) {
-      setAuthData({
-        accessToken: res.jwt_token,
-        refreshToken: res.refresh_token,
+    window.location.href = `/auth/signin${
+      params.toString() ? "?" + params.toString() : ""
+    }`;
+  };
+
+  const signOut = async () => {
+    try {
+      await fetch("/auth/signout", {
+        method: "POST",
+        credentials: "include",
       });
+    } catch {
+      // Best effort
     }
-
-    return {
-      magicLink: res?.magicLink,
-    };
+    cleanTokens();
+    window.location.href = "/signin";
   };
 
-  const register = async (values: SignUpFormType) => {
-    const response = await fetch(
-      `${VITE_GRAPHQL_PLUS_SERVER_URL}/auth/register`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...values,
-          cookie: false,
-        }),
-      }
-    );
+  const refreshAuth = async (): Promise<boolean> => {
+    const result = await fetchToken();
+    if (!result) return false;
 
-    const res = <AuthResponse>await validateResponse(response);
-
-    if (res.error) {
-      return {
-        error: res.error,
-        message: res.message,
-      };
-    }
-
-    setAuthData({
-      accessToken: res.jwt_token,
-      refreshToken: res.refresh_token,
-    });
-  };
-
-  const logout = async () => {
-    const response = await fetch(
-      `${VITE_GRAPHQL_PLUS_SERVER_URL}/auth/logout?refresh_token=${refreshToken}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          all: true,
-        }),
-      }
-    );
-
-    const res = <Response>await validateResponse(response);
-
-    if (res.error) {
-      return {
-        error: res.error,
-        message: res.message,
-      };
-    }
-
-    return res;
-  };
-
-  const changePass = async (values: any) => {
-    const response = await fetch(
-      `${VITE_GRAPHQL_PLUS_SERVER_URL}/auth/change-password`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(values),
-      }
-    );
-
-    const res = <Response>await validateResponse(response);
-
-    if (res.error) {
-      return {
-        error: res.error,
-        message: res.message,
-      };
-    }
-
-    return res;
-  };
-
-  const sendMagicLink = async ({ email }: SignUpFormType) => {
-    const response = await fetch(
-      `${VITE_GRAPHQL_PLUS_SERVER_URL}/auth/register`,
-      {
-        method: "POST",
-        body: JSON.stringify({ email, cookie: false }),
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const res = <AuthResponse>await validateResponse(response);
-
-    if (res.error) {
-      return {
-        error: res.error,
-        message: res.message,
-      };
-    }
-
-    setAuthData({
-      accessToken: res.jwt_token,
-      refreshToken: res.refresh_token,
-    });
-
-    return res;
+    return setAuthData({ accessToken: result.accessToken });
   };
 
   return {
-    login,
-    register,
-    logout,
-    changePass,
-    sendMagicLink,
+    signIn,
+    signOut,
+    fetchToken: refreshAuth,
   };
 };

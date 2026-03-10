@@ -35,12 +35,18 @@ export interface Member {
   avatarUrl?: string;
 }
 
+export interface TeamSettings {
+  partition?: string | null;
+  internal_tables?: string[];
+}
+
 export interface Team {
   id: string;
   name: string;
   role: Roles;
   creatorEmail: string;
   members: Member[];
+  settings?: TeamSettings | null;
   createdAt: string;
   updatedAt: string;
 }

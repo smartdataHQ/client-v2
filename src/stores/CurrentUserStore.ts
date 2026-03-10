@@ -41,19 +41,32 @@ const CurrentUserStore = create<CurrentUser>((set, get) => ({
   },
   setCurrentTeam(id: string) {
     const state = get();
-    const team = state?.currentUser?.teams?.find((t) => t.id === id);
+    const teams = state?.currentUser?.teams || [];
+    const team =
+      teams.find((t) => t.id === id) || (teams.length ? teams[0] : null);
 
     if (!team) {
       localStorage.removeItem(LAST_TEAM_ID_KEY);
+      set({ currentTeam: null, teamData: null, loading: false });
       return;
     }
 
-    const lastTeamId = localStorage.getItem(LAST_TEAM_ID_KEY);
-    if (lastTeamId !== id) {
-      localStorage.setItem(LAST_TEAM_ID_KEY, id);
+    if (team.id !== id) {
+      localStorage.removeItem(LAST_TEAM_ID_KEY);
     }
 
-    set({ currentTeam: team });
+    const lastTeamId = localStorage.getItem(LAST_TEAM_ID_KEY);
+    if (lastTeamId !== team.id) {
+      localStorage.setItem(LAST_TEAM_ID_KEY, team.id);
+    }
+
+    // Clear stale team data when switching teams so old datasources/members
+    // don't flash while new team data loads
+    const isSwitch = !state.currentTeam || state.currentTeam.id !== team.id;
+    set({
+      currentTeam: team,
+      ...(isSwitch ? { teamData: null, loading: true } : {}),
+    });
   },
 }));
 

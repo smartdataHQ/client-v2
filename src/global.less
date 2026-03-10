@@ -20,47 +20,7 @@ body,
   src: url("/public/fonts/Montserrat-Bold.ttf") format("truetype");
 }
 
-@font-face {
-  font-weight: 200;
-  font-family: "Manrope";
-  font-style: normal;
-  src: url("/public/fonts/Manrope-Light.ttf") format("truetype");
-}
-
-@font-face {
-  font-weight: 300;
-  font-family: "Manrope";
-  font-style: normal;
-  src: url("/public/fonts/Manrope-ExtraLight.ttf") format("truetype");
-}
-
-@font-face {
-  font-weight: 400;
-  font-family: "Manrope";
-  font-style: normal;
-  src: url("/public/fonts/Manrope-Regular.ttf") format("truetype");
-}
-
-@font-face {
-  font-weight: 500;
-  font-family: "Manrope";
-  font-style: normal;
-  src: url("/public/fonts/Manrope-Medium.ttf") format("truetype");
-}
-
-@font-face {
-  font-weight: 600;
-  font-family: "Manrope";
-  font-style: normal;
-  src: url("/public/fonts/Manrope-SemiBold.ttf") format("truetype");
-}
-
-@font-face {
-  font-weight: 700;
-  font-family: "Manrope";
-  font-style: normal;
-  src: url("/public/fonts/Manrope-Bold.ttf") format("truetype");
-}
+/* Lato and Inter loaded via Google Fonts CDN in index.html */
 
 @font-face {
   font-weight: normal;
@@ -89,26 +49,30 @@ body,
 
 body {
   margin: 0;
-  font-family: var(--font-manrope);
+  font-family: var(--font-inter);
   line-height: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-div,
+div {
+  font-family: var(--font-inter);
+}
+
 h1,
 h2,
 h3,
 h4,
 h5 {
-  font-family: var(--font-manrope);
+  font-family: var(--font-lato);
 }
 
 :root {
   /* fonts */
   --font-montserrat: Montserrat;
   --font-gotham-pro: "Gotham Pro";
-  --font-manrope: "Manrope";
+  --font-inter: "Inter", sans-serif;
+  --font-lato: "Lato", sans-serif;
   --font-sora: "Sora";
 
   /* font sizes */
@@ -120,16 +84,16 @@ h5 {
   --font-size-sm: 14px;
 
   /* Colors */
-  --color-primary: #470d69;
-  --color-mediumpurple: #a56edd;
-  --color-dimgray-100: #463854;
-  --color-dimgray-200: rgba(70, 56, 84, 0.2);
-  --color-dimgray-300: rgba(70, 56, 84, 0.1);
+  --color-primary: #3f6587;
+  --color-mediumpurple: #5a8ab5;
+  --color-dimgray-100: #3a4f63;
+  --color-dimgray-200: rgba(58, 79, 99, 0.2);
+  --color-dimgray-300: rgba(58, 79, 99, 0.1);
   --color-gray: rgba(255, 255, 255, 0.2);
   --color-darkslategray: #343743;
   --color-darkslategray-100: rgba(52, 55, 67, 0.2);
-  --color-whitesmoke: #e9e8ee;
-  --color-darkorchid: #b65cf8;
+  --color-whitesmoke: #e8edf2;
+  --color-darkorchid: #6ba3d6;
   --color-white: #fff;
   --color-black: #000;
   --color-error: #ff4d4f;
@@ -190,6 +154,6 @@ h5 {
 
 .ant-table-cell {
   font-size: 12px;
-  font-family: var(--font-manrope);
+  font-family: var(--font-inter);
   background: transparent !important;
 }

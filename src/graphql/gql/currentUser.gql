@@ -7,12 +7,14 @@ fragment BranchesFields on branches {
 fragment UserTeamFields on teams {
   id
   name
+  settings
   created_at
   updated_at
   members(order_by: { updated_at: desc }) {
     id
     user_id
     member_roles {
+      id
       team_role
     }
     user {

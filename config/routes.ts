@@ -10,19 +10,32 @@ export default [
         component: "./pages/Callback",
       },
       {
+        path: paths.SIGNIN,
+        component: "./pages/SignIn",
+      },
+      {
+        path: paths.SIGNUP,
+        component: "./pages/SignUp",
+      },
+      {
+        path: paths.LOGOUT,
+        component: "./pages/Logout",
+      },
+      // Legacy auth paths redirect to new paths
+      {
         path: paths.AUTH,
         routes: [
           {
-            path: paths.SIGNUP,
-            component: "./pages/SignUp",
+            path: `${paths.AUTH}/signup`,
+            redirect: paths.SIGNUP,
           },
           {
-            path: paths.SIGNIN,
-            component: "./pages/SignIn",
+            path: `${paths.AUTH}/signin`,
+            redirect: paths.SIGNIN,
           },
           {
-            path: paths.LOGOUT,
-            component: "./pages/Logout",
+            path: `${paths.AUTH}/logout`,
+            redirect: paths.LOGOUT,
           },
           {
             redirect: paths.SIGNIN,
@@ -56,6 +69,9 @@ export default [
               {
                 path: `${paths.REPORTS}/:reportId?`,
                 component: "./pages/Reports",
+              },
+              {
+                component: "./pages/404",
               },
             ],
           },
@@ -94,6 +110,21 @@ export default [
               {
                 path: paths.INFO,
                 component: "./pages/PersonalInfo",
+              },
+              {
+                path: paths.ADMIN_TEAM_PROPERTIES,
+                component: "./pages/AdminTeamProperties",
+              },
+              {
+                path: paths.ADMIN_MEMBER_PROPERTIES,
+                component: "./pages/AdminMemberProperties",
+              },
+              {
+                path: paths.ADMIN_QUERY_RULES,
+                component: "./pages/AdminQueryRules",
+              },
+              {
+                component: "./pages/404",
               },
             ],
           },

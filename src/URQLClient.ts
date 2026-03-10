@@ -1,10 +1,9 @@
 import { authExchange } from "@urql/exchange-auth";
 import { retryExchange } from "@urql/exchange-retry";
-import { history } from "@vitjs/runtime";
 import { createClient as createWsClient } from "graphql-ws";
 import { createClient, fetchExchange, subscriptionExchange } from "urql";
 
-import { fetchRefreshToken } from "@/hooks/useAuth";
+import { fetchToken } from "@/hooks/useAuth";
 import AuthTokensStore from "@/stores/AuthTokensStore";
 import { SIGNIN } from "@/utils/constants/paths";
 
@@ -45,8 +44,36 @@ type Headers = {
   Authorization: string;
 };
 
+const AUTH_ERROR_CODES = new Set([
+  "FORBIDDEN",
+  "INVALID_JWT",
+  "INVALID_HEADERS",
+  "JWT_MISSING_ROLE_CLAIMS",
+  "UNAUTHENTICATED",
+  "ACCESS-DENIED",
+]);
+
+function isAuthError(error: CombinedError) {
+  const responseStatus = error.response?.status;
+  if (responseStatus === 401 || responseStatus === 403) {
+    return true;
+  }
+
+  return error?.graphQLErrors?.some((e) => {
+    const code = String(e.extensions?.code || "").toUpperCase();
+    const message = String(e.message || "").toLowerCase();
+
+    return (
+      AUTH_ERROR_CODES.has(code) ||
+      message.includes("jwt") ||
+      message.includes("not authenticated") ||
+      message.includes("unauthorized")
+    );
+  });
+}
+
 export default () => {
-  const { accessToken, refreshToken, JWTpayload, setAuthData, cleanTokens } =
+  const { accessToken, JWTpayload, setAuthData, cleanTokens } =
     AuthTokensStore();
 
   const client = useMemo(() => {
@@ -85,31 +112,29 @@ export default () => {
           return utils.appendHeaders(operation, headers);
         },
         willAuthError: () => {
-          const expirationTimeInSeconds = (JWTpayload?.exp || 0) * 1000;
-          const now = new Date();
-          const isValid = expirationTimeInSeconds <= now.getTime();
+          // No payload yet — token fetch is in progress, don't trigger refreshAuth
+          if (!JWTpayload?.exp) return false;
 
-          return isValid;
+          const expirationMs = JWTpayload.exp * 1000;
+          return expirationMs - Date.now() <= 60 * 1000;
         },
         didAuthError: (error: CombinedError) => {
-          return error?.graphQLErrors?.some(
-            (e) => e.extensions?.code === "FORBIDDEN"
-          );
+          return isAuthError(error);
         },
         refreshAuth: async () => {
-          if (refreshToken) {
-            const result = await fetchRefreshToken(refreshToken);
+          const result = await fetchToken();
+          if (!result) {
+            cleanTokens();
+            window.location.href = SIGNIN;
+            return;
+          }
 
-            if (result.error) {
-              cleanTokens();
-              history.push(SIGNIN);
-              return;
-            }
-
-            setAuthData({
-              accessToken: result.jwt_token,
-              refreshToken: result.refresh_token,
-            });
+          const authAccepted = setAuthData({
+            accessToken: result.accessToken,
+          });
+          if (!authAccepted) {
+            cleanTokens();
+            window.location.href = SIGNIN;
           }
         },
       })),
@@ -133,7 +158,7 @@ export default () => {
       url: HASURA_GRAPHQL_ENDPOINT,
       exchanges,
     });
-  }, [JWTpayload, accessToken, cleanTokens, refreshToken, setAuthData]);
+  }, [JWTpayload, accessToken, cleanTokens, setAuthData]);
 
   return client;
 };

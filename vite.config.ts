@@ -7,7 +7,6 @@ import vitApp from "@vitjs/vit";
 import { visualizer } from "rollup-plugin-visualizer";
 import autoImport from "unplugin-auto-import/vite";
 import { defineConfig } from "vite";
-import vitePluginImp from "vite-plugin-imp";
 import windiCSS from "vite-plugin-windicss";
 import tsconfigPaths from "vite-tsconfig-paths";
 import svgx from "@svgx/vite-plugin-react";
@@ -70,14 +69,6 @@ export default defineConfig({
         },
       ],
     }),
-    vitePluginImp({
-      libList: [
-        {
-          libName: "antd",
-          style: (name) => `antd/es/${name}/style`,
-        },
-      ],
-    }),
     vitApp({
       routes,
       reactStrictMode: false,
@@ -103,7 +94,7 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (p) => p.replace("/ws", "/graphql"),
       },
-      "/auth": "http://localhost:8081",
+      "/auth": "http://localhost:3000",
       "/api/v1": "http://localhost:4000",
     },
   },

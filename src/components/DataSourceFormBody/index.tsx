@@ -1,10 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
+import { useParams } from "@vitjs/runtime";
 
 import type {
   DataSource,
   DataSourceSetupForm,
   DynamicForm,
 } from "@/types/dataSource";
+import { Branch_Statuses_Enum } from "@/graphql/generated";
 import DataSourceSelection from "@/components/DataSourceSelection";
 import DataSourceSetup from "@/components/DataSourceSetup";
 import DataModelGeneration from "@/components/DataModelGeneration";
@@ -12,8 +14,18 @@ import ApiSetup from "@/components/ApiSetup";
 import { dataSourceForms, dbTiles } from "@/mocks/dataSources";
 import DataSourceStore from "@/stores/DataSourceStore";
 import type { FormState } from "@/stores/DataSourceStore";
+import CurrentUserStore from "@/stores/CurrentUserStore";
+import useLocation from "@/hooks/useLocation";
+import { MODELS } from "@/utils/constants/paths";
 
 import type { FC } from "react";
+
+interface CopyFromOption {
+  id: string;
+  name: string;
+  teamName: string;
+  dbType: string;
+}
 
 interface DataSourceFormBodyProps {
   activeStep?: number;
@@ -26,6 +38,8 @@ interface DataSourceFormBodyProps {
   onDataSourceSetupSubmit?: (data: DataSourceSetupForm) => void;
   onDataModelGenerationSubmit?: (data: DynamicForm) => void;
   onDataSourceSelect?: (value: DataSource) => void;
+  copyFromOptions?: CopyFromOption[];
+  onCopyFrom?: (datasourceId: string) => void;
 }
 
 const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
@@ -39,6 +53,8 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
   onDataSourceSetupSubmit = () => {},
   onDataModelGenerationSubmit = () => {},
   onDataSourceSelect = () => {},
+  copyFromOptions = [],
+  onCopyFrom,
 }) => {
   const {
     step,
@@ -48,6 +64,25 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
     schema,
     setStep,
   } = DataSourceStore();
+
+  const { editId } = useParams();
+  const { teamData } = CurrentUserStore();
+  const [, setLocation] = useLocation();
+
+  const SMART_GEN_TABLES = ["semantic_events", "data_points", "entities"];
+
+  const onSmartGenerate = useCallback(
+    (_schemaName: string, _tableName: string) => {
+      if (!editId || !teamData?.dataSources) return;
+      const ds = teamData.dataSources.find((d) => d.id === editId);
+      const activeBranch = ds?.branches?.find(
+        (b) => b.status === Branch_Statuses_Enum.Active
+      );
+      if (!activeBranch) return;
+      setLocation(`${MODELS}/${editId}/${activeBranch.id}/smartgen`);
+    },
+    [editId, teamData, setLocation]
+  );
 
   const onGoBack = () => onChangeStep?.(step - 1) || setStep(step - 1);
   const onGoForward = () => onChangeStep?.(step + 1) || setStep(step + 1);
@@ -76,6 +111,8 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
           onSubmit={onDataSourceSelect}
           initialValue={curDataSource}
           options={dbTiles}
+          copyFromOptions={copyFromOptions}
+          onCopyFrom={onCopyFrom}
         />
       );
     case 1:
@@ -116,6 +153,8 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
           onSkip={onSkip || onGoForward}
           loading={loading}
           initialValue={formState?.step2 || formData?.step2 || {}}
+          smartGenTables={SMART_GEN_TABLES}
+          onSmartGenerate={onSmartGenerate}
         />
       );
     case 3:
@@ -136,6 +175,8 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
       initialValue={curDataSource}
       options={dbTiles}
       onSkip={onSkip}
+      copyFromOptions={copyFromOptions}
+      onCopyFrom={onCopyFrom}
     />
   );
 };

@@ -1,0 +1,78 @@
+mutation ListAllTeams($limit: Int, $offset: Int, $search: String) {
+  list_all_teams(limit: $limit, offset: $offset, search: $search) {
+    teams {
+      id
+      name
+      settings
+      member_count
+      datasource_count
+      created_at
+    }
+    total
+  }
+}
+
+mutation UpdateTeamProperties($team_id: uuid!, $properties: jsonb!) {
+  update_team_properties(team_id: $team_id, properties: $properties) {
+    success
+  }
+}
+
+mutation UpdateMemberProperties($member_id: uuid!, $properties: jsonb!) {
+  update_member_properties(member_id: $member_id, properties: $properties) {
+    success
+  }
+}
+
+mutation ManageQueryRewriteRule(
+  $action: String!
+  $id: uuid
+  $cube_name: String
+  $dimension: String
+  $property_source: String
+  $property_key: String
+  $operator: String
+) {
+  manage_query_rewrite_rule(
+    action: $action
+    id: $id
+    cube_name: $cube_name
+    dimension: $dimension
+    property_source: $property_source
+    property_key: $property_key
+    operator: $operator
+  ) {
+    success
+    rule_id
+  }
+}
+
+query QueryRewriteRules {
+  query_rewrite_rules(order_by: { cube_name: asc }) {
+    id
+    cube_name
+    dimension
+    property_source
+    property_key
+    operator
+    created_at
+    updated_at
+  }
+}
+
+query TeamMembersAdmin($team_id: uuid!) {
+  members(where: { team_id: { _eq: $team_id } }) {
+    id
+    user_id
+    properties
+    user {
+      display_name
+      account {
+        email
+      }
+    }
+    member_roles {
+      team_role
+    }
+  }
+}

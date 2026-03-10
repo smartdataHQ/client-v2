@@ -14,9 +14,8 @@ export type RootLayoutProps = {
 
 const themeProvider = {
   token: {
-    // fontFamily: 'Gotham Pro, sans-serif',
-    fontFamily: "Manrope",
-    colorPrimary: "#470D69",
+    fontFamily: "Inter, sans-serif",
+    colorPrimary: "#3f6587",
     motion: false,
   },
   components: {

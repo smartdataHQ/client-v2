@@ -16,6 +16,7 @@ import type { Branch, DataSourceInfo } from "@/types/dataSource";
 import type { QuerySettings } from "@/types/querySettings";
 import type { ExplorationData, RawSql } from "@/types/exploration";
 import ExploreSegmentsSection from "@/components/ExploreSegmentsSection";
+import ExploreSelectorsSection from "@/components/ExploreSelectorsSection";
 import type { Meta } from "@/types/cube";
 import { SOURCES } from "@/utils/constants/paths";
 
@@ -85,6 +86,7 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
     },
     settings,
     dispatchSettings,
+    selectors,
   } = usePlayground({
     explorationData,
     meta: meta.data,
@@ -102,15 +104,46 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
     [explorationState.rows.length]
   );
 
+  // Merge selector filters into a filters array, replacing any existing
+  // filters for the same dimension to avoid duplicates on re-run.
+  const mergeSelectorsIntoFilters = useCallback(
+    (filters: any[]) => {
+      if (selectors.selectorFilters.length === 0) return filters;
+      const selectorDims = new Set(
+        selectors.selectorFilters.map((f) => f.dimension)
+      );
+      const cleaned = (filters || []).filter(
+        (f: any) => !selectorDims.has(f.dimension)
+      );
+      return [...cleaned, ...selectors.selectorFilters];
+    },
+    [selectors.selectorFilters]
+  );
+
+  // Playground state with selector filters merged in — used for REST API preview
+  const playgroundStateWithSelectors = useMemo(() => {
+    if (selectors.selectorFilters.length === 0) return playgroundState;
+    return {
+      ...playgroundState,
+      filters: mergeSelectorsIntoFilters(playgroundState.filters),
+    };
+  }, [playgroundState, selectors.selectorFilters, mergeSelectorsIntoFilters]);
+
   const onRunQuery = useCallback(
     (e?: Event) => {
-      const curExplorationState = pickKeys(queryStateKeys, playgroundState);
+      const curExplorationState: Record<string, any> = pickKeys(
+        queryStateKeys,
+        playgroundState
+      );
+      curExplorationState.filters = mergeSelectorsIntoFilters(
+        curExplorationState.filters
+      );
       runQuery(curExplorationState, settings);
 
       e?.preventDefault();
       e?.stopPropagation();
     },
-    [playgroundState, runQuery, settings]
+    [playgroundState, runQuery, settings, selectors.selectorFilters]
   );
 
   const onQueryChange = useCallback(
@@ -158,7 +191,7 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
       disabled={!isQueryChanged}
       state={state}
       loading={loading}
-      playgroundState={playgroundState}
+      playgroundState={playgroundStateWithSelectors}
       queryState={explorationState}
       disableButtons={!explorationData?.exploration?.id}
       screenshotMode={isScreenshotMode}
@@ -190,6 +223,8 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
   const Layout = !!!dataSources?.length ? AppLayout : SidebarLayout;
   const showFiltersSection =
     !!state.filtersCount && state.dataSection === "results";
+  const showSelectorsSection =
+    selectors.requiredParams.length > 0 && state.dataSection === "results";
 
   return (
     <Layout
@@ -210,6 +245,16 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
               key={"segmentsSec"}
               onToggleSection={onToggleSection}
               isActive={collapseState.activePanelKey.includes("segmentsSec")}
+            />
+          )}
+          {showSelectorsSection && (
+            <ExploreSelectorsSection
+              key="selectorsSec"
+              requiredParams={selectors.requiredParams}
+              selectorValues={selectors.selectorValues}
+              onSelectorChange={selectors.setSelectorValue}
+              onToggleSection={onToggleSection}
+              isActive={collapseState.activePanelKey.includes("selectorsSec")}
             />
           )}
           {showFiltersSection && (

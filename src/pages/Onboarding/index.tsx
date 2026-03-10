@@ -1,4 +1,4 @@
-import { Row, Col } from "antd";
+import { Row, Col, message } from "antd";
 import { useParams } from "@vitjs/runtime";
 import { useResponsive } from "ahooks";
 
@@ -7,8 +7,11 @@ import Navbar from "@/components/Navbar";
 import BasicLayout from "@/layouts/BasicLayout";
 import useLocation from "@/hooks/useLocation";
 import useOnboarding from "@/hooks/useOnboarding";
+import usePortalAdmin from "@/hooks/usePortalAdmin";
+import useAllTeamDatasources from "@/hooks/useAllTeamDatasources";
 import DataSourceStore from "@/stores/DataSourceStore";
 import CurrentUserStore from "@/stores/CurrentUserStore";
+import { useCopyDatasourceMutation } from "@/graphql/generated";
 import { userMenu } from "@/mocks/user";
 import type {
   DataSource,
@@ -19,6 +22,13 @@ import { MODELS, ONBOARDING, SOURCES } from "@/utils/constants/paths";
 
 import styles from "./index.module.less";
 
+interface CopyFromOption {
+  id: string;
+  name: string;
+  teamName: string;
+  dbType: string;
+}
+
 interface OnboardingProps {
   loading: boolean;
   onSkip: () => void;
@@ -28,6 +38,8 @@ interface OnboardingProps {
   onDataSourceSetupSubmit: (data: DataSourceSetupForm) => void;
   onDataModelGenerationSubmit: (data: DynamicForm) => void;
   onChangeStep: (value: number) => void;
+  copyFromOptions?: CopyFromOption[];
+  onCopyFrom?: (datasourceId: string) => void;
 }
 
 const Onboarding: React.FC<OnboardingProps> = ({
@@ -39,6 +51,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
   onDataSourceSelect = () => {},
   onDataSourceSetupSubmit = () => {},
   onDataModelGenerationSubmit = () => {},
+  copyFromOptions = [],
+  onCopyFrom,
 }) => {
   const responsive = useResponsive();
   const { currentUser } = CurrentUserStore();
@@ -67,6 +81,8 @@ const Onboarding: React.FC<OnboardingProps> = ({
             onTestConnection={onTestConnection}
             onDataSourceSetupSubmit={onDataSourceSetupSubmit}
             onDataModelGenerationSubmit={onDataModelGenerationSubmit}
+            copyFromOptions={copyFromOptions}
+            onCopyFrom={onCopyFrom}
           />
         </Col>
       </Row>
@@ -92,6 +108,26 @@ const OnboardingWrapper = () => {
 
   const { loading, onDataSourceSetupSubmit, onDataModelGenerationSubmit } =
     useOnboarding({});
+
+  const { isPortalAdmin } = usePortalAdmin();
+  const { datasources: otherTeamDs } = useAllTeamDatasources();
+  const { currentTeam } = CurrentUserStore();
+  const [, execCopyMutation] = useCopyDatasourceMutation();
+
+  const onCopyFrom = async (datasourceId: string) => {
+    if (!currentTeam?.id) return;
+    const result = await execCopyMutation({
+      datasource_id: datasourceId,
+      target_team_id: currentTeam.id,
+    });
+    if (result.data?.copy_datasource?.id) {
+      message.success("Datasource copied successfully");
+      clean();
+      setLocation(SOURCES);
+    } else if (result.error) {
+      message.error(result.error.message);
+    }
+  };
 
   const onFinish = () => {
     clean();
@@ -170,6 +206,8 @@ const OnboardingWrapper = () => {
       onTestConnection={onTestConnection}
       onDataSourceSetupSubmit={onDatasourceSetup}
       onDataModelGenerationSubmit={onDataModelGeneration}
+      copyFromOptions={isPortalAdmin ? otherTeamDs : []}
+      onCopyFrom={isPortalAdmin ? onCopyFrom : undefined}
     />
   );
 };

@@ -1,5 +1,5 @@
 import useLocation from "@/hooks/useLocation";
-import { SIGNIN } from "@/utils/constants/paths";
+import { MODELS } from "@/utils/constants/paths";
 
 interface HomeProps {}
 
@@ -7,7 +7,7 @@ const Home: React.FC<HomeProps> = () => {
   const [_, setLocation] = useLocation();
 
   useEffect(() => {
-    setLocation(SIGNIN);
+    setLocation(MODELS);
   }, []);
 
   return null;

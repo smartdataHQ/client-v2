@@ -1,4 +1,4 @@
-import { Typography } from "antd";
+import { Typography, Space } from "antd";
 import { useTranslation } from "react-i18next";
 
 import NoDataSourceImg from "@/assets/no-db.png";
@@ -12,10 +12,27 @@ const { Title, Text } = Typography;
 
 interface NoDataSourceProps {
   onConnect?: () => void;
+  compact?: boolean;
 }
 
-const NoDataSource: FC<NoDataSourceProps> = ({ onConnect }) => {
+const NoDataSource: FC<NoDataSourceProps> = ({
+  onConnect,
+  compact = false,
+}) => {
   const { t } = useTranslation(["settings", "common"], { useSuspense: false });
+
+  if (compact) {
+    return (
+      <div className={styles.compact}>
+        <Text>{t("data_sources.not_found.title")}</Text>
+        {onConnect && (
+          <Button size="small" type="primary" onClick={onConnect}>
+            {t("data_sources.not_found.connect_btn")}
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={styles.wrapper}>

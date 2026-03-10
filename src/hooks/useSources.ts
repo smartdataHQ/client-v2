@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import type { Maybe } from "@/graphql/generated";
 import {
@@ -10,6 +10,8 @@ import {
   useUpdateDataSourceMutation,
   useFetchMetaQuery,
   useFetchTablesQuery,
+  useSmartGenDataSchemasMutation,
+  useUpdateTeamSettingsMutation,
 } from "@/graphql/generated";
 
 type Params = {
@@ -33,6 +35,10 @@ export default ({ params = {} }: Props) => {
     useGenDataSchemasMutation();
   const [runQueryMutation, execRunQueryMutation] =
     useRunSourceSqlQueryMutation();
+  const [smartGenMutation, execSmartGenMutation] =
+    useSmartGenDataSchemasMutation();
+  const [updateTeamSettingsMutation, execUpdateTeamSettingsMutation] =
+    useUpdateTeamSettingsMutation();
 
   const [metaData, execQueryMeta] = useFetchMetaQuery({
     pause: true,
@@ -82,6 +88,10 @@ export default ({ params = {} }: Props) => {
       execRunQueryMutation,
       genSchemaMutation,
       execGenSchemaMutation,
+      smartGenMutation,
+      execSmartGenMutation,
+      updateTeamSettingsMutation,
+      execUpdateTeamSettingsMutation,
     },
   };
 };

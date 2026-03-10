@@ -1,5 +1,5 @@
 import { useDeepCompareEffect } from "ahooks";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { DataSourceCredentials } from "@/components/CredentialsTable";
 import type {
@@ -18,6 +18,7 @@ import {
   useTeamDataQuery,
 } from "@/graphql/generated";
 import { dbTiles } from "@/mocks/dataSources";
+import { fetchToken } from "@/hooks/useAuth";
 import AuthTokensStore from "@/stores/AuthTokensStore";
 import CurrentUserStore, { LAST_TEAM_ID_KEY } from "@/stores/CurrentUserStore";
 import type { Alert, RawAlert } from "@/types/alert";
@@ -212,14 +213,51 @@ export default () => {
   const {
     currentUser,
     currentTeam,
+    loading,
     setCurrentTeam,
     setLoading,
     setUserData,
     setTeamData,
   } = CurrentUserStore();
-  const { JWTpayload, accessToken } = AuthTokensStore();
+  const { JWTpayload, accessToken, setAuthData } = AuthTokensStore();
   const userId = JWTpayload?.["x-hasura-user-id"];
-  const lastTeamId = localStorage.getItem(LAST_TEAM_ID_KEY);
+  // Note: lastTeamId is read reactively below, not here, to avoid stale captures.
+
+  // Track whether initial token fetch is in progress
+  const [tokenFetchDone, setTokenFetchDone] = useState(false);
+
+  // On mount: fetch token from server session (cookie-based auth)
+  useEffect(() => {
+    if (!accessToken) {
+      fetchToken()
+        .then((result) => {
+          if (result) {
+            const authAccepted = setAuthData({
+              accessToken: result.accessToken,
+            });
+            if (!authAccepted) {
+              window.location.href = SIGNIN;
+              setTokenFetchDone(true);
+              return;
+            }
+            // Only seed the team from the session if the user hasn't manually
+            // switched teams (i.e., no existing lastTeamId in localStorage).
+            // This prevents page reloads from clobbering the user's team choice.
+            if (result.teamId && !localStorage.getItem(LAST_TEAM_ID_KEY)) {
+              localStorage.setItem(LAST_TEAM_ID_KEY, result.teamId);
+            }
+          } else {
+            window.location.href = SIGNIN;
+          }
+          setTokenFetchDone(true);
+        })
+        .catch(() => {
+          setTokenFetchDone(true);
+        });
+    } else {
+      setTokenFetchDone(true);
+    }
+  }, []);
 
   const [, execCreateTeamMutation] = useCreateTeamMutation();
   const [currentUserData, execQueryCurrentUser] = useCurrentUserQuery({
@@ -253,10 +291,10 @@ export default () => {
       }
     }
 
-    if (!accessToken) {
+    if (!accessToken && tokenFetchDone) {
       window.location.href = SIGNIN;
     }
-  }, [accessToken, userId, currentTeam?.id]);
+  }, [accessToken, userId, currentTeam?.id, tokenFetchDone]);
 
   useEffect(() => {
     if (teamData.data) {
@@ -300,17 +338,28 @@ export default () => {
     }
   }, [currentUser?.id, currentUser?.teams?.length, createTeam]);
 
+  // Select the active team once we have the user's team list.
+  // Priority: localStorage (user's choice) > first team in list.
+  // Only runs when teams list changes, NOT when currentTeam changes (avoids loop).
   useEffect(() => {
-    if (currentUser?.teams?.length) {
-      if (!lastTeamId) {
-        setCurrentTeam(currentUser.teams[0].id);
-      } else {
-        setCurrentTeam(lastTeamId);
-      }
-    }
-  }, [currentTeam, currentUser.teams, lastTeamId, setCurrentTeam]);
+    if (!currentUser?.teams?.length) return;
+
+    // Read localStorage at effect-run time (not render time) so we see
+    // updates from the token fetch or manual team switching.
+    const savedTeamId = localStorage.getItem(LAST_TEAM_ID_KEY);
+    const targetId = savedTeamId || currentUser.teams[0].id;
+    setCurrentTeam(targetId);
+  }, [currentUser?.teams, setCurrentTeam]);
+
+  const hasTeams = Boolean(currentUser?.teams?.length);
+  const bootstrapping =
+    !tokenFetchDone ||
+    (Boolean(accessToken) && !currentUser?.id) ||
+    (hasTeams && !currentTeam?.id) ||
+    loading;
 
   return {
+    bootstrapping,
     currentUser,
     queries: {
       currentUserData,

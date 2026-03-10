@@ -160,3 +160,85 @@ mutation RunSourceSQLQuery(
     result
   }
 }
+
+query ProfileTable(
+  $datasource_id: uuid!
+  $branch_id: uuid!
+  $table_name: String!
+  $table_schema: String!
+) {
+  profile_table(
+    datasource_id: $datasource_id
+    branch_id: $branch_id
+    table_name: $table_name
+    table_schema: $table_schema
+  ) {
+    code
+    row_count
+    sampled
+    sample_size
+    columns {
+      name
+      raw_type
+      column_type
+      value_type
+      has_values
+      unique_values
+      unique_keys
+      lc_values
+    }
+    array_candidates {
+      column
+      element_type
+      suggested_alias
+    }
+    primary_keys
+    existing_model {
+      file_name
+      file_format
+      has_user_content
+      supports_reprofile
+      suggested_merge_strategy
+    }
+  }
+}
+
+mutation SmartGenDataSchemas(
+  $datasource_id: uuid!
+  $branch_id: uuid!
+  $table_name: String!
+  $table_schema: String!
+  $array_join_columns: [ArrayJoinInput]
+  $max_map_keys: Int
+  $merge_strategy: String
+) {
+  smart_gen_dataschemas(
+    datasource_id: $datasource_id
+    branch_id: $branch_id
+    table_name: $table_name
+    table_schema: $table_schema
+    array_join_columns: $array_join_columns
+    max_map_keys: $max_map_keys
+    merge_strategy: $merge_strategy
+  ) {
+    code
+    message
+    version_id
+    file_name
+    changed
+  }
+}
+
+mutation UpdateTeamSettings($team_id: uuid!, $settings: jsonb!) {
+  update_team_settings(team_id: $team_id, settings: $settings) {
+    code
+    message
+  }
+}
+
+mutation CopyDatasource($datasource_id: uuid!, $target_team_id: uuid!) {
+  copy_datasource(datasource_id: $datasource_id, target_team_id: $target_team_id) {
+    id
+    name
+  }
+}

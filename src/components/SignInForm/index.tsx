@@ -1,13 +1,8 @@
-import { Form, Typography } from "antd";
-import cn from "classnames";
-import { useForm } from "react-hook-form";
+import { Typography, Button, Input, Space, Divider, Alert } from "antd";
 import { useTranslation } from "react-i18next";
 
-import Button from "@/components/Button";
-import Input from "@/components/Input";
 import useLocation from "@/hooks/useLocation";
-import validate from "@/utils/helpers/validations";
-import { SIGNIN, SIGNUP } from "@/utils/constants/paths";
+import { SIGNUP } from "@/utils/constants/paths";
 
 import styles from "./index.module.less";
 
@@ -15,37 +10,67 @@ import type { FC } from "react";
 
 const { Title, Text } = Typography;
 
-export interface SignInFormType {
-  email: string;
-  password?: string;
-}
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  session_expired: "Your session has expired. Please sign in again.",
+  access_denied: "Access was denied. Please try again or contact your admin.",
+  callback_failed:
+    "Sign-in could not be completed due to a server error. Please try again.",
+  unauthorized:
+    "You are not authorized to access this resource. Please sign in.",
+  signup_disabled:
+    "Account registration is currently disabled. Please contact your administrator.",
+};
 
 interface SignInFormProps {
-  isMagicLink: boolean;
-  loading: boolean;
-  onSubmit: (data: SignInFormType) => void;
+  error?: string | null;
 }
 
-const SignInForm: FC<SignInFormProps> = ({
-  isMagicLink,
-  loading,
-  onSubmit,
-}) => {
+const SignInForm: FC<SignInFormProps> = ({ error }) => {
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [signupEnabled, setSignupEnabled] = useState(false);
   const [, setLocation] = useLocation();
-
   const { t } = useTranslation(["sign", "common"]);
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm<SignInFormType>();
 
+  // Fetch auth config to check if signup is enabled
   useEffect(() => {
-    if (isMagicLink) {
-      setValue("password", undefined);
+    fetch("/auth/config")
+      .then((r) => r.json())
+      .then((data) => setSignupEnabled(data.signupEnabled === true))
+      .catch(() => setSignupEnabled(false));
+  }, []);
+
+  // Read error from URL on mount
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorCode = params.get("error") || error;
+    if (errorCode) {
+      setErrorMessage(
+        AUTH_ERROR_MESSAGES[errorCode] ||
+          "Something went wrong. Please try again."
+      );
+      // Clean error from URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.toString());
     }
-  }, [isMagicLink, setValue]);
+  }, [error]);
+
+  const handleSSOSignin = () => {
+    if (!email.trim()) return;
+    setIsLoading(true);
+    const params = new URLSearchParams({ email: email.trim() });
+    window.location.href = `/auth/signin?${params.toString()}`;
+  };
+
+  const handleProviderSignin = (provider: string) => {
+    window.location.href = `/auth/signin?provider=${provider}`;
+  };
+
+  const handleCreateAccount = () => {
+    window.location.href = "/auth/signin?signup=true";
+  };
 
   return (
     <div className={styles.wrapper}>
@@ -54,78 +79,81 @@ const SignInForm: FC<SignInFormProps> = ({
         <Text className={styles.desc}>{t("sign_in.text")}!</Text>
       </div>
 
-      <div className={styles.magicLinkWrapper}>
+      {errorMessage && (
+        <Alert
+          message={errorMessage}
+          type="error"
+          closable
+          onClose={() => setErrorMessage(null)}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        <Input
+          type="email"
+          placeholder={t("common:form.placeholders.email")}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onPressEnter={handleSSOSignin}
+          disabled={isLoading}
+          size="large"
+        />
+
         <Button
-          className={styles.magicLink}
+          type="primary"
           block
           size="large"
-          type="default"
-          onClick={() =>
-            isMagicLink
-              ? setLocation(SIGNIN)
-              : setLocation(`${SIGNIN}?magicLink`)
-          }
+          loading={isLoading}
+          disabled={isLoading || !email.trim()}
+          onClick={handleSSOSignin}
         >
-          {isMagicLink
-            ? t("sign_in.sign_in_password")
-            : t("sign_in.magic_link_login")}
-        </Button>
-      </div>
-      <div className={styles.or}>{t("sign_in.or")}</div>
-      <Form className={styles.form}>
-        <Input
-          className={cn(styles.formItem, styles.input, {
-            [styles.error]: errors?.email,
-          })}
-          variant="borderless"
-          placeholder={t("common:form.placeholders.email")}
-          control={control}
-          rules={{
-            required: true,
-            validate: (v: string) =>
-              validate.email(v) || t("common:form.errors.email"),
-          }}
-          name="email"
-        />
-        {!isMagicLink && (
-          <Input
-            className={cn(styles.formItem, styles.input, {
-              [styles.error]: errors?.password,
-            })}
-            variant="borderless"
-            placeholder={t("common:form.placeholders.password")}
-            control={control}
-            rules={{
-              required: true,
-            }}
-            name="password"
-            fieldType="password"
-          />
-        )}
-        <Button
-          className={styles.submit}
-          type="primary"
-          htmlType="submit"
-          size="large"
-          loading={loading}
-          onClick={handleSubmit(onSubmit)}
-        >
-          {isMagicLink ? t("sign_in.send_link") : t("sign_in.login")}
+          Continue with SSO
         </Button>
 
-        <Text className={styles.text}>
-          {t("sign_in.bottom_text")}{" "}
-          <Button
-            className={styles.link}
-            type="link"
-            onClick={() => setLocation(SIGNUP)}
-          >
-            {t("sign_in.sign_up_link")}
+        <Divider>Or continue with:</Divider>
+
+        <Space
+          style={{ width: "100%", justifyContent: "center" }}
+          size="middle"
+        >
+          <Button onClick={() => handleProviderSignin("google")}>Google</Button>
+          <Button onClick={() => handleProviderSignin("github")}>GitHub</Button>
+          <Button onClick={() => handleProviderSignin("linkedin")}>
+            LinkedIn
           </Button>
-        </Text>
-      </Form>
+        </Space>
+
+        {signupEnabled && (
+          <>
+            <Divider />
+
+            <Button
+              type="primary"
+              block
+              size="large"
+              onClick={handleCreateAccount}
+            >
+              Create a new account
+            </Button>
+
+            <Text className={styles.text}>
+              Already have an account?{" "}
+              <Button
+                className={styles.link}
+                type="link"
+                onClick={() => setLocation(SIGNUP)}
+              >
+                {t("sign_in.sign_up_link")}
+              </Button>
+            </Text>
+          </>
+        )}
+      </Space>
     </div>
   );
 };
 
 export default SignInForm;
+
+export type { SignInFormProps };
