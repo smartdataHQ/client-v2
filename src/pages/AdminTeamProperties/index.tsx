@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Card,
   Table,
@@ -11,21 +11,25 @@ import {
   message,
   Tag,
   Popconfirm,
+  Badge,
 } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import { useMutation } from "urql";
 
 import usePortalAdmin from "@/hooks/usePortalAdmin";
+import formatTime from "@/utils/helpers/formatTime";
 
 const { Title, Text } = Typography;
 
 const LIST_ALL_TEAMS = `
-  mutation ListAllTeams($limit: Int, $offset: Int) {
-    list_all_teams(limit: $limit, offset: $offset) {
+  mutation ListAllTeams($limit: Int, $offset: Int, $search: String) {
+    list_all_teams(limit: $limit, offset: $offset, search: $search) {
       teams {
         id
         name
         settings
         member_count
+        datasource_count
         created_at
       }
       total
@@ -46,6 +50,7 @@ interface TeamInfo {
   name: string;
   settings: Record<string, any> | null;
   member_count: number;
+  datasource_count: number;
   created_at: string;
 }
 
@@ -56,26 +61,35 @@ const AdminTeamProperties: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [editingTeam, setEditingTeam] = useState<TeamInfo | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [form] = Form.useForm();
 
   const [, listTeams] = useMutation(LIST_ALL_TEAMS);
   const [, updateProperties] = useMutation(UPDATE_TEAM_PROPERTIES);
 
-  const fetchTeams = async (offset = 0) => {
-    setLoading(true);
-    const res = await listTeams({ limit: 50, offset });
-    const data = res.data?.list_all_teams;
-    if (data) {
-      setTeams(data.teams);
-      setTotal(data.total);
-    }
-    setLoading(false);
-  };
+  const fetchTeams = useCallback(
+    async (pageNum = 1, searchTerm = search) => {
+      setLoading(true);
+      const offset = (pageNum - 1) * 50;
+      const res = await listTeams({
+        limit: 50,
+        offset,
+        search: searchTerm || null,
+      });
+      const data = res.data?.list_all_teams;
+      if (data) {
+        setTeams(data.teams);
+        setTotal(data.total);
+      }
+      setLoading(false);
+    },
+    [listTeams, search]
+  );
 
-  // Fetch on first render
-  useState(() => {
-    if (isPortalAdmin) fetchTeams();
-  });
+  useEffect(() => {
+    if (isPortalAdmin) fetchTeams(1, "");
+  }, [isPortalAdmin]);
 
   if (!isPortalAdmin) {
     return (
@@ -84,6 +98,17 @@ const AdminTeamProperties: React.FC = () => {
       </Card>
     );
   }
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setPage(1);
+    fetchTeams(1, value);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchTeams(newPage);
+  };
 
   const handleEdit = (team: TeamInfo) => {
     setEditingTeam(team);
@@ -118,7 +143,7 @@ const AdminTeamProperties: React.FC = () => {
     if (res.data?.update_team_properties?.success) {
       message.success("Team properties updated");
       setModalOpen(false);
-      fetchTeams();
+      fetchTeams(page);
     } else {
       message.error("Failed to update team properties");
     }
@@ -134,15 +159,34 @@ const AdminTeamProperties: React.FC = () => {
       title: "Members",
       dataIndex: "member_count",
       key: "member_count",
+      width: 100,
+    },
+    {
+      title: "Sources",
+      dataIndex: "datasource_count",
+      key: "datasource_count",
+      width: 100,
+      render: (count: number) => (
+        <Badge
+          count={count}
+          showZero
+          color={count > 0 ? "blue" : "default"}
+          style={{ fontSize: 12 }}
+        />
+      ),
     },
     {
       title: "Properties",
       key: "settings",
       render: (_: any, record: TeamInfo) => {
         const settings = record.settings || {};
+        const entries = Object.entries(settings);
+        if (entries.length === 0) {
+          return <Text type="secondary">None</Text>;
+        }
         return (
           <Space wrap>
-            {Object.entries(settings).map(([key, value]) => (
+            {entries.map(([key, value]) => (
               <Tag key={key}>
                 {key}:{" "}
                 {typeof value === "string" ? value : JSON.stringify(value)}
@@ -153,8 +197,16 @@ const AdminTeamProperties: React.FC = () => {
       },
     },
     {
+      title: "Created",
+      dataIndex: "created_at",
+      key: "created_at",
+      width: 160,
+      render: (date: string) => formatTime(date),
+    },
+    {
       title: "Actions",
       key: "actions",
+      width: 130,
       render: (_: any, record: TeamInfo) => (
         <Button size="small" onClick={() => handleEdit(record)}>
           Edit Properties
@@ -165,23 +217,40 @@ const AdminTeamProperties: React.FC = () => {
 
   return (
     <Card>
-      <Title level={4}>Team Properties</Title>
-      <Text type="secondary">
-        Manage properties for all teams. Properties like &quot;partition&quot;
-        are used for data access controls.
-      </Text>
+      <Space
+        direction="vertical"
+        size={16}
+        style={{ width: "100%", marginBottom: 16 }}
+      >
+        <Title level={4} style={{ margin: 0 }}>
+          Team Properties
+        </Title>
+        <Text type="secondary">
+          Manage properties for all teams. Properties like &quot;partition&quot;
+          are used for data access controls.
+        </Text>
+        <Input.Search
+          placeholder="Search teams by name..."
+          allowClear
+          enterButton={<SearchOutlined />}
+          onSearch={handleSearch}
+          style={{ maxWidth: 400 }}
+        />
+      </Space>
 
       <Table
         dataSource={teams}
         columns={columns}
         rowKey="id"
         loading={loading}
+        size="middle"
         pagination={{
+          current: page,
           total,
           pageSize: 50,
-          onChange: (page) => fetchTeams((page - 1) * 50),
+          onChange: handlePageChange,
+          showTotal: (t) => `${t} teams`,
         }}
-        style={{ marginTop: 16 }}
       />
 
       <Modal

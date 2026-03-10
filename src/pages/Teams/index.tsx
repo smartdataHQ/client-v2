@@ -13,6 +13,7 @@ import {
   useDeleteTeamMutation,
 } from "@/graphql/generated";
 import useCheckResponse from "@/hooks/useCheckResponse";
+import usePortalAdmin from "@/hooks/usePortalAdmin";
 import Avatar, { AvatarGroup } from "@/components/Avatar";
 import Card from "@/components/Card";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -39,6 +40,7 @@ interface TeamsProps {
   onClose?: () => void;
   onOpen?: (id?: string) => void;
   editId?: string;
+  isPortalAdmin?: boolean;
 }
 
 const AVATAR_COLORS = ["#000000", "#3f6587", "#4a7faa"];
@@ -55,6 +57,7 @@ export const Teams: React.FC<TeamsProps> = ({
   onClose = () => {},
   onOpen = () => {},
   editId,
+  isPortalAdmin = false,
 }) => {
   const { t } = useTranslation(["teams", "pages"]);
 
@@ -184,6 +187,32 @@ export const Teams: React.FC<TeamsProps> = ({
               </dd>
             </>
           )}
+          {isPortalAdmin && team.settings && (
+            <>
+              <dt>Settings</dt>
+              <dd>
+                <Space wrap size={4}>
+                  {Object.entries(team.settings).map(([key, value]) => (
+                    <Tag key={key} style={{ margin: 0 }}>
+                      {key}:{" "}
+                      {typeof value === "string"
+                        ? value
+                        : JSON.stringify(value)}
+                    </Tag>
+                  ))}
+                </Space>
+              </dd>
+            </>
+          )}
+          {isPortalAdmin &&
+            (!team.settings || Object.keys(team.settings).length === 0) && (
+              <>
+                <dt>Settings</dt>
+                <dd>
+                  <Tag color="default">None</Tag>
+                </dd>
+              </>
+            )}
         </dl>
       </Card>
     );
@@ -232,6 +261,7 @@ const TeamsWrapper: React.FC = () => {
   const { t } = useTranslation(["teams", "pages"]);
   const { currentUser, currentTeam, loading, setLoading, setCurrentTeam } =
     CurrentUserStore();
+  const { isPortalAdmin } = usePortalAdmin();
   const [createMutation, execCreateMutation] = useCreateTeamMutation();
   const [updateMutation, execUpdateMutation] = useEditTeamMutation();
   const [deleteMutation, execDeleteMutation] = useDeleteTeamMutation();
@@ -344,6 +374,7 @@ const TeamsWrapper: React.FC = () => {
       editId={isNew ? undefined : editId}
       onClose={() => setLocation(TEAMS)}
       onOpen={onOpen}
+      isPortalAdmin={isPortalAdmin}
     />
   );
 };
