@@ -50,6 +50,10 @@ function getKeyForFormat(prop: PropertySpec, format: "yaml" | "js"): string {
 
 /**
  * Build a lookup map from format-appropriate key to PropertySpec.
+ *
+ * For JS files, Cube.js accepts BOTH camelCase (jsKey) and snake_case (yamlKey)
+ * forms — the compiler normalizes them. We register both so that smart-generated
+ * JS files using snake_case (e.g. `sql_table`) are not flagged as unknown.
  */
 function buildKeyMap(
   properties: Record<string, PropertySpec>,
@@ -58,6 +62,10 @@ function buildKeyMap(
   const map = new Map<string, PropertySpec>();
   for (const spec of Object.values(properties)) {
     map.set(getKeyForFormat(spec, format), spec);
+    // For JS, also accept the YAML (snake_case) key
+    if (format === "js" && spec.yamlKey !== spec.jsKey) {
+      map.set(spec.yamlKey, spec);
+    }
   }
   return map;
 }
@@ -101,13 +109,16 @@ function diag(
  * canonical memberType key used in ConstructSpec.memberTypes.
  *
  * YAML documents use snake_case keys (e.g. "pre_aggregations"),
- * JS documents use camelCase keys (e.g. "preAggregations").
+ * JS documents may use either camelCase or snake_case.
  * The spec memberTypes always uses camelCase keys.
  */
+const snakeToCamelMemberTypes: Record<string, string> = {
+  pre_aggregations: "preAggregations",
+  access_policy: "accessPolicy",
+};
+
 function canonicalMemberType(key: string): string {
-  // Handle the snake_case → camelCase mapping for pre_aggregations
-  if (key === "pre_aggregations") return "preAggregations";
-  return key;
+  return snakeToCamelMemberTypes[key] ?? key;
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +180,10 @@ function validateConstruct(
       constructSpec.memberTypes[key]
     ) {
       memberGroupKeys.add(key);
+      // For JS, also accept the YAML (snake_case) form
+      if (format === "js" && spec.yamlKey !== spec.jsKey) {
+        memberGroupKeys.add(spec.yamlKey);
+      }
     }
   }
 
