@@ -52,6 +52,7 @@
         "unchanged": "^2.2.1",
         "urql": "^4.0.5",
         "use-local-storage-state": "^19.1.0",
+        "yaml": "^2.3.4",
         "zustand": "^4.4.1",
       },
       "devDependencies": {
@@ -3847,7 +3848,7 @@
 
     "yallist": ["yallist@https://registry.npmjs.org/yallist/-/yallist-3.1.1.tgz", {}],
 
-    "yaml": ["yaml@2.3.3", "", {}, "sha512-zw0VAJxgeZ6+++/su5AFoqBbZbrEakwu+X0M5HmcwUiBL7AzcuPKjj5we4xfQLp78LkEMpD0cOnUhmgOVy3KdQ=="],
+    "yaml": ["yaml@2.8.2", "", { "bin": { "yaml": "bin.mjs" } }, "sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A=="],
 
     "yaml-ast-parser": ["yaml-ast-parser@https://registry.npmjs.org/yaml-ast-parser/-/yaml-ast-parser-0.0.43.tgz", {}],
 
@@ -3980,6 +3981,8 @@
     "@babel/traverse/globals": ["globals@https://registry.npmjs.org/globals/-/globals-11.12.0.tgz", {}],
 
     "@eslint-community/eslint-utils/eslint-visitor-keys": ["eslint-visitor-keys@https://registry.npmjs.org/eslint-visitor-keys/-/eslint-visitor-keys-3.4.0.tgz", {}],
+
+    "@graphql-codegen/cli/yaml": ["yaml@2.3.3", "", {}, "sha512-zw0VAJxgeZ6+++/su5AFoqBbZbrEakwu+X0M5HmcwUiBL7AzcuPKjj5we4xfQLp78LkEMpD0cOnUhmgOVy3KdQ=="],
 
     "@graphql-codegen/named-operations-object/@graphql-codegen/plugin-helpers": ["@graphql-codegen/plugin-helpers@3.1.2", "", { "dependencies": { "@graphql-tools/utils": "^9.0.0", "change-case-all": "1.0.15", "common-tags": "1.8.2", "import-from": "4.0.0", "lodash": "~4.17.0", "tslib": "~2.4.0" } }, "sha512-emOQiHyIliVOIjKVKdsI5MXj312zmRDwmHpyUTZMjfpvxq/UVAHUJIVdVf+lnjjrI+LXBTgMlTWTgHQfmICxjg=="],
 
