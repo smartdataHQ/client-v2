@@ -607,6 +607,66 @@ describe("diagnosticProvider", () => {
       const jsDiags = validateDocument(jsDoc, cubeJsSpec);
       expect(jsDiags).toEqual([]);
     });
+
+    it("produces zero errors for a JS cube using snake_case keys (smart-generated pattern)", () => {
+      const js = `cube(\`semantic_events\`, {
+  sql_table: \`cst.semantic_events\`,
+
+  meta: {
+    auto_generated: true,
+    source_database: "cst",
+    source_table: "semantic_events",
+  },
+
+  dimensions: {
+    timestamp: {
+      sql: \`\${CUBE}.timestamp\`,
+      type: \`time\`,
+      meta: {
+        source_column: "timestamp",
+        raw_type: "DateTime64(3)",
+        auto_generated: true,
+      },
+    },
+    event: {
+      sql: \`\${CUBE}.event\`,
+      type: \`string\`,
+      meta: {
+        source_column: "event",
+        raw_type: "LowCardinality(String)",
+        auto_generated: true,
+      },
+    },
+    customer_facing: {
+      sql: \`(\${CUBE}.customer_facing) = 1\`,
+      type: \`boolean\`,
+    },
+  },
+
+  measures: {
+    count: {
+      type: \`count\`,
+    },
+    total_duration: {
+      sql: \`\${CUBE}.duration\`,
+      type: \`sum\`,
+    },
+  },
+
+  pre_aggregations: {
+    main: {
+      type: "rollup",
+      external: true,
+      scheduled_refresh: true,
+    },
+  },
+});
+`;
+      const doc = parseJsDocument(js);
+      const diagnostics = validateDocument(doc, cubeJsSpec);
+      const errors = diagnostics.filter((d) => d.severity === "error");
+      expect(errors).toEqual([]);
+    });
   });
 
   // -------------------------------------------------------------------
