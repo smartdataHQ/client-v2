@@ -213,6 +213,7 @@ export default () => {
   const {
     currentUser,
     currentTeam,
+    loading,
     setCurrentTeam,
     setLoading,
     setUserData,
@@ -231,7 +232,14 @@ export default () => {
       fetchToken()
         .then((result) => {
           if (result) {
-            setAuthData({ accessToken: result.accessToken });
+            const authAccepted = setAuthData({
+              accessToken: result.accessToken,
+            });
+            if (!authAccepted) {
+              window.location.href = SIGNIN;
+              setTokenFetchDone(true);
+              return;
+            }
             // Only seed the team from the session if the user hasn't manually
             // switched teams (i.e., no existing lastTeamId in localStorage).
             // This prevents page reloads from clobbering the user's team choice.
@@ -343,7 +351,15 @@ export default () => {
     setCurrentTeam(targetId);
   }, [currentUser?.teams, setCurrentTeam]);
 
+  const hasTeams = Boolean(currentUser?.teams?.length);
+  const bootstrapping =
+    !tokenFetchDone ||
+    (Boolean(accessToken) && !currentUser?.id) ||
+    (hasTeams && !currentTeam?.id) ||
+    loading;
+
   return {
+    bootstrapping,
     currentUser,
     queries: {
       currentUserData,

@@ -19,7 +19,7 @@ type AuthData = {
 interface TokensState {
   accessToken: string | null;
   JWTpayload: HasuraJWTPayload | null;
-  setAuthData: (authData: AuthData) => void;
+  setAuthData: (authData: AuthData) => boolean;
   cleanTokens: () => void;
 }
 
@@ -31,19 +31,30 @@ const defaultTokens = {
 const AuthTokensStore = create<TokensState>()((set) => ({
   ...defaultTokens,
   setAuthData: (authData: AuthData) => {
-    const { accessToken } = authData;
-    const payload = jwtDecode<Payload>(accessToken);
+    try {
+      const { accessToken } = authData;
+      if (!accessToken) {
+        throw new Error("Missing access token");
+      }
 
-    const JWTpayload = {
-      ...payload,
-      ...payload.hasura,
-    };
-    delete JWTpayload.hasura;
+      const payload = jwtDecode<Payload>(accessToken);
 
-    set({
-      accessToken,
-      JWTpayload,
-    } as TokensState);
+      const JWTpayload = {
+        ...payload,
+        ...payload.hasura,
+      };
+      delete JWTpayload.hasura;
+
+      set({
+        accessToken,
+        JWTpayload,
+      } as TokensState);
+
+      return true;
+    } catch {
+      set({ ...defaultTokens });
+      return false;
+    }
   },
   cleanTokens: () => set({ ...defaultTokens }),
 }));
