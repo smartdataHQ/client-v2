@@ -298,7 +298,7 @@ export const Models: React.FC<ModelsProps> = ({
               <Modal
                 open={!!smartGenModalVisible}
                 onClose={onModalClose}
-                width={720}
+                width={1100}
               >
                 <SmartGeneration
                   dataSource={dataSource!}

@@ -156,11 +156,18 @@ export type ProfiledColumnOutput = {
   __typename?: "ProfiledColumnOutput";
   column_type: Scalars["String"]["output"];
   has_values: Scalars["Boolean"]["output"];
+  value_rows?: Maybe<Scalars["Int"]["output"]>;
   lc_values?: Maybe<Scalars["jsonb"]["output"]>;
   name: Scalars["String"]["output"];
   raw_type: Scalars["String"]["output"];
   unique_keys?: Maybe<Array<Maybe<Scalars["String"]["output"]>>>;
   unique_values?: Maybe<Scalars["Int"]["output"]>;
+  min_value?: Maybe<Scalars["String"]["output"]>;
+  max_value?: Maybe<Scalars["String"]["output"]>;
+  avg_value?: Maybe<Scalars["Float"]["output"]>;
+  max_array_length?: Maybe<Scalars["Int"]["output"]>;
+  key_stats?: Maybe<Scalars["jsonb"]["output"]>;
+  description?: Maybe<Scalars["String"]["output"]>;
   value_type: Scalars["String"]["output"];
 };
 
@@ -12385,9 +12392,16 @@ export type ProfileTableQuery = {
       column_type: string;
       value_type: string;
       has_values: boolean;
+      value_rows?: number | null;
       unique_values?: number | null;
+      min_value?: string | null;
+      max_value?: string | null;
+      avg_value?: number | null;
+      max_array_length?: number | null;
       unique_keys?: Array<string | null> | null;
       lc_values?: any | null;
+      key_stats?: any | null;
+      description?: string | null;
     } | null> | null;
     array_candidates?: Array<{
       __typename?: "ArrayCandidateOutput";
@@ -13867,9 +13881,16 @@ export const ProfileTableDocument = gql`
         column_type
         value_type
         has_values
+        value_rows
         unique_values
+        min_value
+        max_value
+        avg_value
+        max_array_length
         unique_keys
         lc_values
+        key_stats
+        description
       }
       array_candidates {
         column
