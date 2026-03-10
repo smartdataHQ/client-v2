@@ -73,6 +73,10 @@ interface SmartGenerationProps {
   branchId: string;
   onComplete: () => void;
   onCancel: () => void;
+  /** Pre-selected table schema (e.g. "cst") from model provenance — skips table selection */
+  initialSchema?: string;
+  /** Pre-selected table name (e.g. "semantic_events") from model provenance — skips table selection */
+  initialTable?: string;
 }
 
 const SmartGeneration: FC<SmartGenerationProps> = ({
@@ -81,11 +85,20 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   branchId,
   onComplete,
   onCancel,
+  initialSchema,
+  initialTable,
 }) => {
   const { t } = useTranslation(["models", "common"]);
-  const [step, setStep] = useState<SmartGenStep>("select");
-  const [selectedSchema, setSelectedSchema] = useState<string>("");
-  const [selectedTable, setSelectedTable] = useState<string>("");
+  const hasInitial = !!(initialSchema && initialTable);
+  const [step, setStep] = useState<SmartGenStep>(
+    hasInitial ? "profiling" : "select"
+  );
+  const [selectedSchema, setSelectedSchema] = useState<string>(
+    initialSchema || ""
+  );
+  const [selectedTable, setSelectedTable] = useState<string>(
+    initialTable || ""
+  );
   const [mergeStrategy, setMergeStrategy] = useState<string>("auto");
   const [arrayJoinSelections, setArrayJoinSelections] = useState<
     ArrayJoinSelection[]
@@ -104,6 +117,19 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   });
 
   const [smartGenResult, execSmartGen] = useSmartGenDataSchemasMutation();
+
+  // Auto-start profiling when pre-selected table is provided (reprofile flow)
+  useEffect(() => {
+    if (hasInitial && selectedTable && selectedSchema) {
+      execProfile({
+        datasource_id: dataSource.id!,
+        branch_id: branchId,
+        table_name: selectedTable,
+        table_schema: selectedSchema,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // React to profile result changes
   useEffect(() => {

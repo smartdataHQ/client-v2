@@ -1,4 +1,4 @@
-import { useEffect, type ChangeEvent } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import { Space, Spin, message } from "antd";
 import { useParams } from "@vitjs/runtime";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,7 @@ import useLocation from "@/hooks/useLocation";
 import useModelsIde from "@/hooks/useModelsIde";
 import useSources from "@/hooks/useSources";
 import useCheckResponse from "@/hooks/useCheckResponse";
+import { parseProvenance } from "@/utils/provenanceParser";
 import calcChecksum from "@/utils/helpers/dataschemasChecksum";
 import getTables from "@/utils/helpers/getTables";
 import getCurrentBranch from "@/utils/helpers/getCurrentBranch";
@@ -97,6 +98,7 @@ interface ModelsProps {
   versionsCount?: number;
   onVersionsOpen?: () => void;
   onReprofile?: (schema: Dataschema) => void;
+  reprofileTarget?: { table: string; schema: string } | null;
 }
 
 export const Models: React.FC<ModelsProps> = ({
@@ -138,6 +140,7 @@ export const Models: React.FC<ModelsProps> = ({
   versionsCount,
   onVersionsOpen,
   onReprofile,
+  reprofileTarget,
 }) => {
   const { t } = useTranslation(["pages", "models"]);
   const windowSize = useResponsive();
@@ -303,6 +306,8 @@ export const Models: React.FC<ModelsProps> = ({
                   branchId={currentBranch?.id || ""}
                   onComplete={onSmartGenComplete}
                   onCancel={onModalClose}
+                  initialTable={reprofileTarget?.table ?? undefined}
+                  initialSchema={reprofileTarget?.schema ?? undefined}
                 />
               </Modal>
             </>
@@ -387,7 +392,13 @@ const ModelsWrapper: React.FC = () => {
     variables: { branch_id: currentBranch?.id },
   });
 
+  const [reprofileTarget, setReprofileTarget] = useState<{
+    table: string;
+    schema: string;
+  } | null>(null);
+
   const onModalClose = (goBack: boolean = false) => {
+    setReprofileTarget(null);
     if (history.state && goBack) {
       history.back();
     } else {
@@ -576,8 +587,17 @@ const ModelsWrapper: React.FC = () => {
     onModalClose(true);
   };
 
-  const onReprofile = (_schema: Dataschema) => {
-    // Navigate to smart gen modal — the SmartGeneration component will handle the flow
+  const onReprofile = (fileSchema: Dataschema) => {
+    // Parse source table/schema from the model's provenance metadata
+    const provenance = parseProvenance(fileSchema.code || "");
+    if (provenance?.sourceTable && provenance?.sourceDatabase) {
+      setReprofileTarget({
+        table: provenance.sourceTable,
+        schema: provenance.sourceDatabase,
+      });
+    } else {
+      setReprofileTarget(null);
+    }
     setLocation(`${basePath}/${curSource?.id}/${currentBranch?.id}/smartgen`);
   };
 
@@ -912,6 +932,7 @@ const ModelsWrapper: React.FC = () => {
         )
       }
       onReprofile={isClickHouse ? onReprofile : undefined}
+      reprofileTarget={reprofileTarget}
     />
   );
 };
