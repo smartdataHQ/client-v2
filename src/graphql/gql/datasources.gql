@@ -200,6 +200,7 @@ query ProfileTable(
       supports_reprofile
       suggested_merge_strategy
     }
+    raw_profile
   }
 }
 
@@ -211,6 +212,8 @@ mutation SmartGenDataSchemas(
   $array_join_columns: [ArrayJoinInput]
   $max_map_keys: Int
   $merge_strategy: String
+  $profile_data: jsonb
+  $dry_run: Boolean
 ) {
   smart_gen_dataschemas(
     datasource_id: $datasource_id
@@ -220,12 +223,15 @@ mutation SmartGenDataSchemas(
     array_join_columns: $array_join_columns
     max_map_keys: $max_map_keys
     merge_strategy: $merge_strategy
+    profile_data: $profile_data
+    dry_run: $dry_run
   ) {
     code
     message
     version_id
     file_name
     changed
+    change_preview
   }
 }
 

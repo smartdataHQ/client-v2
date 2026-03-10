@@ -12403,6 +12403,7 @@ export type ProfileTableQuery = {
       supports_reprofile: boolean;
       suggested_merge_strategy: string;
     } | null;
+    raw_profile?: any | null;
   } | null;
 };
 
@@ -12416,6 +12417,8 @@ export type SmartGenDataSchemasMutationVariables = Exact<{
   >;
   max_map_keys?: InputMaybe<Scalars["Int"]["input"]>;
   merge_strategy?: InputMaybe<Scalars["String"]["input"]>;
+  profile_data?: InputMaybe<Scalars["jsonb"]["input"]>;
+  dry_run?: InputMaybe<Scalars["Boolean"]["input"]>;
 }>;
 
 export type SmartGenDataSchemasMutation = {
@@ -12427,6 +12430,7 @@ export type SmartGenDataSchemasMutation = {
     version_id?: any | null;
     file_name?: string | null;
     changed: boolean;
+    change_preview?: any | null;
   } | null;
 };
 
@@ -13880,6 +13884,7 @@ export const ProfileTableDocument = gql`
         supports_reprofile
         suggested_merge_strategy
       }
+      raw_profile
     }
   }
 `;
@@ -13901,6 +13906,8 @@ export const SmartGenDataSchemasDocument = gql`
     $array_join_columns: [ArrayJoinInput]
     $max_map_keys: Int
     $merge_strategy: String
+    $profile_data: jsonb
+    $dry_run: Boolean
   ) {
     smart_gen_dataschemas(
       datasource_id: $datasource_id
@@ -13910,12 +13917,15 @@ export const SmartGenDataSchemasDocument = gql`
       array_join_columns: $array_join_columns
       max_map_keys: $max_map_keys
       merge_strategy: $merge_strategy
+      profile_data: $profile_data
+      dry_run: $dry_run
     ) {
       code
       message
       version_id
       file_name
       changed
+      change_preview
     }
   }
 `;
