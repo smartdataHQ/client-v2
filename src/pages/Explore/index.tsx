@@ -28,7 +28,9 @@ import useCheckResponse from "@/hooks/useCheckResponse";
 import type { Exploration, ExplorationData, RawSql } from "@/types/exploration";
 import type { AlertType } from "@/types/alert";
 import type { Meta } from "@/types/cube";
-import { EXPLORE, ONBOARDING } from "@/utils/constants/paths";
+import { EXPLORE, SOURCES } from "@/utils/constants/paths";
+import NoDataSource from "@/components/NoDataSource";
+import AppLayout from "@/layouts/AppLayout";
 
 import ExploreIcon from "@/assets/explore-active.svg";
 
@@ -55,6 +57,7 @@ interface ExploreProps {
   runQuery?: (state: object, settings: QuerySettings) => void;
   onSelectDataSource?: (dataSource: DataSourceInfo | null) => void;
   onChangeBranch?: (id: string) => void;
+  onConnect?: () => void;
   params: Params;
 }
 
@@ -75,6 +78,7 @@ export const Explore = ({
   runQuery = () => {},
   onSelectDataSource = () => {},
   onChangeBranch = () => {},
+  onConnect,
 }: ExploreProps) => {
   const { t } = useTranslation("pages");
   const { modalType } = params;
@@ -104,6 +108,14 @@ export const Explore = ({
       onSelectDataSource,
     ]
   );
+
+  if (!dataSources?.length) {
+    return (
+      <AppLayout title={t("explore")}>
+        <NoDataSource onConnect={onConnect} />
+      </AppLayout>
+    );
+  }
 
   const isAlertOpen = modalType === "alert";
   const isReportOpen = modalType === "report";
@@ -341,11 +353,7 @@ const ExploreWrapper = () => {
     setCurrentBranchId,
   ]);
 
-  useEffect(() => {
-    if (currentUser?.id && teamData && !teamData?.dataSources?.length) {
-      setLocation(ONBOARDING);
-    }
-  }, [currentUser?.id, setLocation, teamData, teamData?.dataSources?.length]);
+  // No longer force-redirect to onboarding — show inline prompt instead
 
   const meta = {
     data: metaData?.data?.fetch_meta?.cubes || [],
@@ -373,6 +381,7 @@ const ExploreWrapper = () => {
       branches={curSource?.branches || []}
       onChangeBranch={onChangeBranch}
       currentBranch={currentBranch}
+      onConnect={() => setLocation(`${SOURCES}/new`)}
       params={{
         modalType: modalType?.toLowerCase(),
         delivery: delivery?.toUpperCase() as AlertType,

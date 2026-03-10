@@ -1,6 +1,6 @@
-import { Col, Dropdown, Row, Space, Spin, Tag, message } from "antd";
+import { Col, Dropdown, Input, Row, Space, Spin, Tag, message } from "antd";
 import { useTranslation } from "react-i18next";
-import { SettingOutlined } from "@ant-design/icons";
+import { SearchOutlined, SettingOutlined } from "@ant-design/icons";
 import { useParams } from "@vitjs/runtime";
 
 import Modal from "@/components/Modal";
@@ -13,6 +13,7 @@ import {
   useDeleteTeamMutation,
 } from "@/graphql/generated";
 import useCheckResponse from "@/hooks/useCheckResponse";
+import usePortalAdmin from "@/hooks/usePortalAdmin";
 import Avatar, { AvatarGroup } from "@/components/Avatar";
 import Card from "@/components/Card";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -39,6 +40,7 @@ interface TeamsProps {
   onClose?: () => void;
   onOpen?: (id?: string) => void;
   editId?: string;
+  isPortalAdmin?: boolean;
 }
 
 const AVATAR_COLORS = ["#000000", "#3f6587", "#4a7faa"];
@@ -55,10 +57,22 @@ export const Teams: React.FC<TeamsProps> = ({
   onClose = () => {},
   onOpen = () => {},
   editId,
+  isPortalAdmin = false,
 }) => {
   const { t } = useTranslation(["teams", "pages"]);
 
   const [selectedTeam, setSelectedTeam] = useState<TeamSettingsForm>();
+  const [search, setSearch] = useState("");
+
+  const filteredTeams = useMemo(
+    () =>
+      search
+        ? teams.filter((tm) =>
+            tm.name.toLowerCase().includes(search.toLowerCase())
+          )
+        : teams,
+    [teams, search]
+  );
 
   const onEdit = (team: Team) => {
     onOpen(team.id);
@@ -184,6 +198,32 @@ export const Teams: React.FC<TeamsProps> = ({
               </dd>
             </>
           )}
+          {isPortalAdmin && team.settings && (
+            <>
+              <dt>Settings</dt>
+              <dd>
+                <Space wrap size={4}>
+                  {Object.entries(team.settings).map(([key, value]) => (
+                    <Tag key={key} style={{ margin: 0 }}>
+                      {key}:{" "}
+                      {typeof value === "string"
+                        ? value
+                        : JSON.stringify(value)}
+                    </Tag>
+                  ))}
+                </Space>
+              </dd>
+            </>
+          )}
+          {isPortalAdmin &&
+            (!team.settings || Object.keys(team.settings).length === 0) && (
+              <>
+                <dt>Settings</dt>
+                <dd>
+                  <Tag color="default">None</Tag>
+                </dd>
+              </>
+            )}
         </dl>
       </Card>
     );
@@ -204,11 +244,22 @@ export const Teams: React.FC<TeamsProps> = ({
           onClick={onCreate}
         />
 
+        {teams.length > 1 && (
+          <Input.Search
+            placeholder="Search teams..."
+            allowClear
+            enterButton={<SearchOutlined />}
+            onChange={(e) => setSearch(e.target.value)}
+            value={search}
+            style={{ maxWidth: 400 }}
+          />
+        )}
+
         <Spin spinning={loading}>
-          {teams.length ? (
+          {filteredTeams.length ? (
             <div className={styles.body}>
               <Row justify={"start"} gutter={[32, 32]}>
-                {teams?.map((tm) => (
+                {filteredTeams?.map((tm) => (
                   <Col xs={24} sm={12} xl={8} key={tm.id}>
                     {renderCard(tm)}
                   </Col>
@@ -222,7 +273,12 @@ export const Teams: React.FC<TeamsProps> = ({
       </Space>
 
       <Modal open={isOpen} closable onClose={onModalClose}>
-        <TeamSettings initialValue={selectedTeam} onSubmit={onSubmit} />
+        <TeamSettings
+          initialValue={selectedTeam}
+          onSubmit={onSubmit}
+          team={editId ? teams.find((tm) => tm.id === editId) : undefined}
+          isPortalAdmin={isPortalAdmin}
+        />
       </Modal>
     </>
   );
@@ -232,6 +288,7 @@ const TeamsWrapper: React.FC = () => {
   const { t } = useTranslation(["teams", "pages"]);
   const { currentUser, currentTeam, loading, setLoading, setCurrentTeam } =
     CurrentUserStore();
+  const { isPortalAdmin } = usePortalAdmin();
   const [createMutation, execCreateMutation] = useCreateTeamMutation();
   const [updateMutation, execUpdateMutation] = useEditTeamMutation();
   const [deleteMutation, execDeleteMutation] = useDeleteTeamMutation();
@@ -344,6 +401,7 @@ const TeamsWrapper: React.FC = () => {
       editId={isNew ? undefined : editId}
       onClose={() => setLocation(TEAMS)}
       onOpen={onOpen}
+      isPortalAdmin={isPortalAdmin}
     />
   );
 };

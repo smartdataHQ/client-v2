@@ -42,7 +42,7 @@ import {
   useCurrentVersionQuery,
   useVersionsCountSubscription,
 } from "@/graphql/generated";
-import { EXPORT, MODELS, ONBOARDING, SOURCES } from "@/utils/constants/paths";
+import { EXPORT, MODELS, SOURCES } from "@/utils/constants/paths";
 
 import ModelsActiveIcon from "@/assets/models-active.svg";
 
@@ -534,11 +534,7 @@ const ModelsWrapper: React.FC = () => {
     }
   }, [sourceTablesSchema]);
 
-  useEffect(() => {
-    if (currentUser.id && teamData && !teamData?.dataSources.length) {
-      setLocation(ONBOARDING);
-    }
-  }, [currentUser.id, setLocation, teamData, teamData?.dataSources.length]);
+  // No longer force-redirect to onboarding — the page shows NoDataSource inline instead
 
   useEffect(() => {
     if (createVersionMutation.data || genSchemaMutation.data) {

@@ -1,10 +1,11 @@
-mutation ListAllTeams($limit: Int, $offset: Int) {
-  list_all_teams(limit: $limit, offset: $offset) {
+mutation ListAllTeams($limit: Int, $offset: Int, $search: String) {
+  list_all_teams(limit: $limit, offset: $offset, search: $search) {
     teams {
       id
       name
       settings
       member_count
+      datasource_count
       created_at
     }
     total
