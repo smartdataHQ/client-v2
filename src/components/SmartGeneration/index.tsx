@@ -8,6 +8,8 @@ import {
   Select,
   Space,
   Spin,
+  Table,
+  Tag,
   Typography,
 } from "antd";
 import { useTranslation } from "react-i18next";
@@ -59,7 +61,195 @@ const SimulatedProgress: FC<{
   );
 };
 
-type SmartGenStep = "select" | "profiling" | "preview" | "generating" | "done";
+// -- Change preview types --
+
+interface ChangeField {
+  name: string;
+  type?: string;
+  member_type: string;
+  cube: string;
+  reason?: string;
+}
+
+interface ChangeBlock {
+  block: string;
+  cube: string;
+}
+
+interface ChangePreview {
+  fields_added: ChangeField[];
+  fields_updated: ChangeField[];
+  fields_removed: ChangeField[];
+  fields_preserved: ChangeField[];
+  blocks_preserved: ChangeBlock[];
+  summary: string;
+}
+
+/** Render the change preview as categorized tables. */
+const ChangePreviewPanel: FC<{ preview: ChangePreview }> = ({ preview }) => {
+  const columns = [
+    { title: "Field", dataIndex: "name", key: "name" },
+    {
+      title: "Type",
+      dataIndex: "member_type",
+      key: "member_type",
+      render: (v: string) => (
+        <Tag color={v === "dimension" ? "blue" : "green"}>{v}</Tag>
+      ),
+    },
+    {
+      title: "Cube Type",
+      dataIndex: "type",
+      key: "type",
+      render: (v: string) => v || "—",
+    },
+    { title: "Cube", dataIndex: "cube", key: "cube" },
+  ];
+
+  const preservedColumns = [
+    { title: "Field", dataIndex: "name", key: "name" },
+    {
+      title: "Type",
+      dataIndex: "member_type",
+      key: "member_type",
+      render: (v: string) => (
+        <Tag color={v === "dimension" ? "blue" : "green"}>{v}</Tag>
+      ),
+    },
+    {
+      title: "Reason",
+      dataIndex: "reason",
+      key: "reason",
+      render: (v: string) => {
+        switch (v) {
+          case "user_created":
+            return <Tag color="purple">User-created</Tag>;
+          case "edited_description":
+            return <Tag color="orange">Edited description</Tag>;
+          default:
+            return v;
+        }
+      },
+    },
+    { title: "Cube", dataIndex: "cube", key: "cube" },
+  ];
+
+  const hasChanges =
+    preview.fields_added.length > 0 ||
+    preview.fields_updated.length > 0 ||
+    preview.fields_removed.length > 0;
+
+  return (
+    <div className={styles.changePreview}>
+      <Title level={5}>Change Preview</Title>
+      <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+        {preview.summary}
+      </Text>
+
+      {preview.fields_added.length > 0 && (
+        <div className={styles.changeSection}>
+          <div className={styles.changeSectionHeader}>
+            <Tag color="success">+{preview.fields_added.length}</Tag>
+            <Text strong>Fields to add</Text>
+          </div>
+          <Table
+            size="small"
+            dataSource={preview.fields_added}
+            columns={columns}
+            rowKey={(r) => `${r.cube}.${r.name}`}
+            pagination={
+              preview.fields_added.length > 10 ? { pageSize: 10 } : false
+            }
+          />
+        </div>
+      )}
+
+      {preview.fields_updated.length > 0 && (
+        <div className={styles.changeSection}>
+          <div className={styles.changeSectionHeader}>
+            <Tag color="processing">~{preview.fields_updated.length}</Tag>
+            <Text strong>Fields to update</Text>
+          </div>
+          <Table
+            size="small"
+            dataSource={preview.fields_updated}
+            columns={columns}
+            rowKey={(r) => `${r.cube}.${r.name}`}
+            pagination={
+              preview.fields_updated.length > 10 ? { pageSize: 10 } : false
+            }
+          />
+        </div>
+      )}
+
+      {preview.fields_removed.length > 0 && (
+        <div className={styles.changeSection}>
+          <div className={styles.changeSectionHeader}>
+            <Tag color="error">-{preview.fields_removed.length}</Tag>
+            <Text strong>Fields to remove</Text>
+          </div>
+          <Table
+            size="small"
+            dataSource={preview.fields_removed}
+            columns={columns}
+            rowKey={(r) => `${r.cube}.${r.name}`}
+            pagination={
+              preview.fields_removed.length > 10 ? { pageSize: 10 } : false
+            }
+          />
+        </div>
+      )}
+
+      {preview.fields_preserved.length > 0 && (
+        <div className={styles.changeSection}>
+          <div className={styles.changeSectionHeader}>
+            <Tag color="default">{preview.fields_preserved.length}</Tag>
+            <Text strong>User fields preserved</Text>
+          </div>
+          <Table
+            size="small"
+            dataSource={preview.fields_preserved}
+            columns={preservedColumns}
+            rowKey={(r) => `${r.cube}.${r.name}`}
+            pagination={
+              preview.fields_preserved.length > 10 ? { pageSize: 10 } : false
+            }
+          />
+        </div>
+      )}
+
+      {preview.blocks_preserved.length > 0 && (
+        <div className={styles.changeSection}>
+          <div className={styles.changeSectionHeader}>
+            <Text strong>Blocks preserved</Text>
+          </div>
+          <Space>
+            {preview.blocks_preserved.map((b) => (
+              <Tag key={`${b.cube}.${b.block}`} color="purple">
+                {b.block}
+              </Tag>
+            ))}
+          </Space>
+        </div>
+      )}
+
+      {!hasChanges &&
+        preview.fields_preserved.length === 0 &&
+        preview.blocks_preserved.length === 0 && (
+          <Alert message="No changes detected" type="info" showIcon />
+        )}
+    </div>
+  );
+};
+
+type SmartGenStep =
+  | "select"
+  | "profiling"
+  | "preview"
+  | "previewing_changes"
+  | "change_preview"
+  | "applying"
+  | "done";
 
 interface ArrayJoinSelection {
   column: string;
@@ -104,6 +294,10 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     ArrayJoinSelection[]
   >([]);
   const [error, setError] = useState<string | null>(null);
+  const [rawProfile, setRawProfile] = useState<any>(null);
+  const [changePreview, setChangePreview] = useState<ChangePreview | null>(
+    null
+  );
 
   const [profileResult, execProfile] = useProfileTableQuery({
     pause: true,
@@ -145,6 +339,10 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       const profileData = profileResult.data.profile_table;
       if (profileData.existing_model?.suggested_merge_strategy) {
         setMergeStrategy(profileData.existing_model.suggested_merge_strategy);
+      }
+      // Cache raw profile for reuse during generation (avoids re-profiling ClickHouse)
+      if (profileData.raw_profile) {
+        setRawProfile(profileData.raw_profile);
       }
       // Initialize array join selections from candidates
       if (profileData.array_candidates?.length) {
@@ -188,6 +386,8 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     if (!selectedTable || !selectedSchema) return;
     setStep("profiling");
     setError(null);
+    setRawProfile(null);
+    setChangePreview(null);
     execProfile({
       datasource_id: dataSource.id!,
       branch_id: branchId,
@@ -196,8 +396,9 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     });
   }, [selectedTable, selectedSchema, dataSource.id, branchId, execProfile]);
 
-  const handleGenerate = useCallback(async () => {
-    setStep("generating");
+  // Preview changes (dry-run) — no ClickHouse query, uses cached profile
+  const handlePreviewChanges = useCallback(async () => {
+    setStep("previewing_changes");
     setError(null);
 
     const selectedArrayJoins = arrayJoinSelections
@@ -213,11 +414,57 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       array_join_columns: selectedArrayJoins.length
         ? selectedArrayJoins
         : undefined,
+      profile_data: rawProfile || undefined,
+      dry_run: true,
     });
 
     if (result.error) {
       setError(result.error.message);
       setStep("preview");
+      return;
+    }
+
+    const preview = result.data?.smart_gen_dataschemas?.change_preview;
+    if (preview) {
+      setChangePreview(preview as ChangePreview);
+    }
+    setStep("change_preview");
+  }, [
+    dataSource.id,
+    branchId,
+    selectedTable,
+    selectedSchema,
+    mergeStrategy,
+    arrayJoinSelections,
+    rawProfile,
+    execSmartGen,
+  ]);
+
+  // Apply changes (real mutation) — uses cached profile, no ClickHouse query
+  const handleApply = useCallback(async () => {
+    setStep("applying");
+    setError(null);
+
+    const selectedArrayJoins = arrayJoinSelections
+      .filter((a) => a.selected)
+      .map((a) => ({ column: a.column, alias: a.alias }));
+
+    const result = await execSmartGen({
+      datasource_id: dataSource.id!,
+      branch_id: branchId,
+      table_name: selectedTable,
+      table_schema: selectedSchema,
+      merge_strategy: mergeStrategy,
+      array_join_columns: selectedArrayJoins.length
+        ? selectedArrayJoins
+        : undefined,
+      profile_data: rawProfile || undefined,
+      dry_run: false,
+    });
+
+    if (result.error) {
+      setError(result.error.message);
+      setStep("change_preview");
       return;
     }
 
@@ -229,6 +476,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     selectedSchema,
     mergeStrategy,
     arrayJoinSelections,
+    rawProfile,
     execSmartGen,
   ]);
 
@@ -317,7 +565,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
         />
       )}
 
-      {/* Step 3: Profile preview */}
+      {/* Step 3: Profile preview + options */}
       {step === "preview" && profileData && (
         <>
           <div className={styles.summarySection}>
@@ -478,28 +726,66 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
             >
               {t("common:words.back")}
             </Button>
-            <Button type="primary" size="large" onClick={handleGenerate}>
-              Generate Model
+            <Button type="primary" size="large" onClick={handlePreviewChanges}>
+              Preview Changes
             </Button>
           </div>
         </>
       )}
 
-      {/* Step 4: Generating */}
-      {step === "generating" && (
+      {/* Step 4: Previewing changes (dry-run in progress) */}
+      {step === "previewing_changes" && (
         <SimulatedProgress
           messages={[
             "Building cube definitions...",
-            "Generating YAML model...",
-            "Applying merge strategy...",
-            "Creating new version...",
+            "Computing change preview...",
           ]}
           maxPercent={95}
-          intervalMs={2000}
+          intervalMs={1500}
         />
       )}
 
-      {/* Step 5: Done */}
+      {/* Step 5: Change preview */}
+      {step === "change_preview" && (
+        <>
+          {changePreview && <ChangePreviewPanel preview={changePreview} />}
+
+          {error && (
+            <Alert
+              className={styles.errorMessage}
+              message={error}
+              type="error"
+              showIcon
+            />
+          )}
+
+          <div className={styles.actions}>
+            <Button
+              size="large"
+              onClick={() => {
+                setStep("preview");
+                setError(null);
+              }}
+            >
+              {t("common:words.back")}
+            </Button>
+            <Button type="primary" size="large" onClick={handleApply}>
+              Apply Changes
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* Step 6: Applying */}
+      {step === "applying" && (
+        <SimulatedProgress
+          messages={["Applying merge strategy...", "Creating new version..."]}
+          maxPercent={95}
+          intervalMs={1500}
+        />
+      )}
+
+      {/* Step 7: Done */}
       {step === "done" && genData && (
         <>
           <Alert
@@ -512,6 +798,15 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
             type={genData.changed ? "success" : "info"}
             showIcon
           />
+
+          {genData.change_preview && (
+            <div style={{ marginTop: 16 }}>
+              <ChangePreviewPanel
+                preview={genData.change_preview as ChangePreview}
+              />
+            </div>
+          )}
+
           <div className={styles.actions}>
             <Button type="primary" size="large" onClick={onComplete}>
               Done
