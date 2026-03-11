@@ -234,6 +234,7 @@ export default () => {
           if (result) {
             const authAccepted = setAuthData({
               accessToken: result.accessToken,
+              workosAccessToken: result.workosAccessToken,
             });
             if (!authAccepted) {
               window.location.href = SIGNIN;

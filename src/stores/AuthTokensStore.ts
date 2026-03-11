@@ -14,10 +14,12 @@ interface Payload extends JwtPayload {
 
 type AuthData = {
   accessToken: string;
+  workosAccessToken?: string | null;
 };
 
 interface TokensState {
   accessToken: string | null;
+  workosAccessToken: string | null;
   JWTpayload: HasuraJWTPayload | null;
   setAuthData: (authData: AuthData) => boolean;
   cleanTokens: () => void;
@@ -25,6 +27,7 @@ interface TokensState {
 
 const defaultTokens = {
   accessToken: null,
+  workosAccessToken: null,
   JWTpayload: null,
 };
 
@@ -32,7 +35,7 @@ const AuthTokensStore = create<TokensState>()((set) => ({
   ...defaultTokens,
   setAuthData: (authData: AuthData) => {
     try {
-      const { accessToken } = authData;
+      const { accessToken, workosAccessToken } = authData;
       if (!accessToken) {
         throw new Error("Missing access token");
       }
@@ -47,6 +50,7 @@ const AuthTokensStore = create<TokensState>()((set) => ({
 
       set({
         accessToken,
+        workosAccessToken: workosAccessToken || null,
         JWTpayload,
       } as TokensState);
 

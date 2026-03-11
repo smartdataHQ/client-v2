@@ -752,7 +752,9 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       setProfileData(null);
       setProgressEvents([]);
 
-      const token = AuthTokensStore.getState().accessToken;
+      const token =
+        AuthTokensStore.getState().workosAccessToken ||
+        AuthTokensStore.getState().accessToken;
 
       fetch("/api/v1/profile-table", {
         method: "POST",

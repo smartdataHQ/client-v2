@@ -1,4 +1,4 @@
-import { Spin, Col, Form, Row, Space } from "antd";
+import { Radio, Spin, Col, Form, Row, Space } from "antd";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import cn from "classnames";
@@ -60,8 +60,15 @@ const RestAPI: FC<RestApiProps> = ({
   playgroundState,
 }) => {
   const { t } = useTranslation(["explore", "common"], { useSuspense: false });
-  const { accessToken } = AuthTokensStore();
+  const { accessToken, workosAccessToken } = AuthTokensStore();
+  const [authMethod, setAuthMethod] = useState<"workos" | "hasura">(
+    workosAccessToken ? "workos" : "hasura"
+  );
   const [state, setState] = useState<RestApiState>(defaultState);
+  const activeToken =
+    authMethod === "workos" && workosAccessToken
+      ? workosAccessToken
+      : accessToken;
   const { control, handleSubmit, setValue, getValues, watch } = useForm<any>({
     values: {
       json: JSON.stringify(
@@ -74,7 +81,7 @@ const RestAPI: FC<RestApiProps> = ({
       ),
       "x-hasura-datasource-id": dataSourceId,
       "x-hasura-branch-id": branchId,
-      token: `Bearer ${accessToken}`,
+      token: `Bearer ${activeToken}`,
       url: CUBEJS_REST_API_URL,
       response: "",
     },
@@ -117,6 +124,10 @@ const RestAPI: FC<RestApiProps> = ({
   };
 
   useEffect(() => {
+    setValue("token", `Bearer ${activeToken}`);
+  }, [authMethod, activeToken, setValue]);
+
+  useEffect(() => {
     const subscription = watch((values, { name }) => {
       if (name === "token") {
         if (!values.token.includes("Bearer ")) {
@@ -138,6 +149,21 @@ const RestAPI: FC<RestApiProps> = ({
     >
       <Form layout="vertical" className={styles.form}>
         <Space style={{ width: "100%" }} direction="vertical" size={16}>
+          {workosAccessToken && (
+            <Form.Item label="Auth Method" className={styles.label}>
+              <Radio.Group
+                value={authMethod}
+                onChange={(e) => setAuthMethod(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+                size="small"
+              >
+                <Radio.Button value="workos">WorkOS</Radio.Button>
+                <Radio.Button value="hasura">Hasura</Radio.Button>
+              </Radio.Group>
+            </Form.Item>
+          )}
+
           <Form.Item
             label={t("common:form.labels.headers")}
             className={styles.label}
