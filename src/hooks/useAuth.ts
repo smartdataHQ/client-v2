@@ -2,6 +2,7 @@ import AuthTokensStore from "@/stores/AuthTokensStore";
 
 type TokenResponse = {
   accessToken: string;
+  workosAccessToken?: string | null;
   userId: string;
   teamId?: string | null;
   role: string;
@@ -61,7 +62,10 @@ export default () => {
     const result = await fetchToken();
     if (!result) return false;
 
-    return setAuthData({ accessToken: result.accessToken });
+    return setAuthData({
+      accessToken: result.accessToken,
+      workosAccessToken: result.workosAccessToken,
+    });
   };
 
   return {

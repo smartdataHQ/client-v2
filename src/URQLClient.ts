@@ -131,6 +131,7 @@ export default () => {
 
           const authAccepted = setAuthData({
             accessToken: result.accessToken,
+            workosAccessToken: result.workosAccessToken,
           });
           if (!authAccepted) {
             cleanTokens();
