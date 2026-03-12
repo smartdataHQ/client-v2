@@ -10,8 +10,6 @@ import s from "./index.module.less";
 
 import type { FC } from "react";
 
-const MAX_ROWS_LIMIT = 10000;
-
 export interface DataSchemaFormValues {
   limit: number;
   offset: number;
@@ -60,7 +58,6 @@ const ExploreSettingsForm: FC<ExploreSettingsFormProps> = ({
             size="middle"
             min={1}
             addonAfter={null}
-            max={MAX_ROWS_LIMIT}
             control={control}
             addonBefore={t("data_section.row_limit")}
           />

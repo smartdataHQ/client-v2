@@ -4,9 +4,11 @@ mutation CreateExploration($object: explorations_insert_input!) {
   }
 }
 
-mutation GenSQL($exploration_id: uuid!) {
-  gen_sql(exploration_id: $exploration_id) {
+mutation GenSQL($exploration_id: uuid!, $limit: Int) {
+  gen_sql(exploration_id: $exploration_id, limit: $limit) {
     result
+    column_metadata
+    sql_signature
   }
 }
 
