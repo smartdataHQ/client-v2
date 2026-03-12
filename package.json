@@ -2,12 +2,12 @@
   "name": "fraios-semantic-layer",
   "version": "1.0.0",
   "scripts": {
-    "build": "bunx --bun vite build",
+    "build": "vite build",
     "postbuild": "tar -czvf dist.tar.gz dist && zip -r dist.zip dist",
     "build-storybook": "bunx --bun storybook build",
     "codegen": "bunx --bun graphql-codegen",
     "codegen:watch": "bunx --bun graphql-codegen --watch",
-    "dev": "bunx --bun vite --host",
+    "dev": "vite --host",
     "dev:force": "bun run dev -- --force",
     "lint": "bun run lint:js && bunx --bun tsc",
     "lint-staged": "bunx --bun lint-staged",
@@ -18,7 +18,7 @@
     "prepare": "node node_modules/husky/lib/bin.js install .husky",
     "prettier": "bunx --bun prettier --check --write \"src/**/*\"",
     "semantic-release": "bunx --bun semantic-release",
-    "serve": "bunx --bun vite preview --host",
+    "serve": "vite preview --host",
     "start": "bun run dev",
     "storybook": "bunx --bun storybook dev -p 6007",
     "test": "bunx --bun vitest"
