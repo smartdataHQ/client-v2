@@ -1,16 +1,16 @@
-import { Col, Divider, Radio, Row, Tooltip } from "antd";
-import { CSVLink } from "react-csv";
+import { Col, Divider, Dropdown, Radio, Row, Tooltip } from "antd";
+import { DownOutlined } from "@ant-design/icons";
 import { useResponsive, useSetState } from "ahooks";
 import { useTranslation } from "react-i18next";
 import cn from "classnames";
 
 import useAnalyticsQueryMembers from "@/hooks/useAnalyticsQueryMembers";
+import useFormatExport from "@/hooks/useFormatExport";
 import Button from "@/components/Button";
 import VirtualTable, { cellRenderer } from "@/components/VirtualTable";
 import PrismCode from "@/components/PrismCode";
 import ComponentSwitcher from "@/components/ComponentSwitcher";
 import RestAPI from "@/components/RestAPI";
-import genName from "@/utils/helpers/genName";
 import type { DataSchemaFormValues } from "@/components/ExploreSettingsForm";
 import ExploreSettingsForm from "@/components/ExploreSettingsForm";
 import type { ExploreWorkspaceState } from "@/hooks/useExploreWorkspace";
@@ -56,6 +56,7 @@ interface ExploreDataSectionProps extends Omit<CollapsePanelProps, "header"> {
   emptyDesc?: ReactNode;
   className?: string;
   loading?: boolean;
+  explorationId?: string;
 }
 
 const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
@@ -78,6 +79,7 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
     disabled,
     loading = false,
     disableButtons,
+    explorationId,
   } = props;
   const { t } = useTranslation(["explore", "common"]);
   const windowSize = useResponsive();
@@ -85,6 +87,12 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
   const isMinSize = windowSize?.sm === false;
   const [currState, updateState] = useSetState({
     section: workspaceState?.dataSection || "sql",
+  });
+
+  const { exportData, isExporting } = useFormatExport({
+    explorationId,
+    datasourceId: dataSource?.id,
+    branchId: currentBranch?.id,
   });
 
   // const formConfig = {
@@ -370,14 +378,25 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
                 </Row>
               </Col>
               <Col style={growColumns}>
-                <CSVLink data={rows} filename={`exploration-${genName(5)}.csv`}>
+                <Dropdown
+                  menu={{
+                    items: [
+                      { key: "json", label: "Export JSON" },
+                      { key: "csv", label: "Export CSV" },
+                      { key: "jsonstat", label: "Export JSON-Stat" },
+                    ],
+                    onClick: ({ key }) =>
+                      exportData(key as "json" | "csv" | "jsonstat"),
+                  }}
+                  disabled={disableButtons || !explorationId || isExporting}
+                >
                   <Button
                     className={cn(s.csvBtn, isMobile && s.mobileButton)}
-                    disabled={disableButtons}
+                    loading={isExporting}
                   >
-                    {t("data_section.export")} .CSV
+                    {t("data_section.export")} <DownOutlined />
                   </Button>
-                </CSVLink>
+                </Dropdown>
               </Col>
             </Row>
           </Col>

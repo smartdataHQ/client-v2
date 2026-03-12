@@ -1,4 +1,4 @@
-import { Radio, Spin, Col, Form, Row, Space } from "antd";
+import { Radio, Select, Spin, Col, Form, Row, Space } from "antd";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import cn from "classnames";
@@ -16,6 +16,8 @@ import CopyIcon from "@/assets/copy.svg";
 import styles from "./index.module.less";
 
 import type { FC } from "react";
+
+type OutputFormat = "json" | "csv" | "jsonstat";
 
 const CUBEJS_REST_API_URL =
   window.CUBEJS_REST_API_URL !== undefined
@@ -54,6 +56,12 @@ const normalizeOrders = (orders: SortBy[]) => {
   );
 };
 
+const FORMAT_OPTIONS = [
+  { value: "json", label: "JSON" },
+  { value: "csv", label: "CSV" },
+  { value: "jsonstat", label: "JSON-Stat" },
+];
+
 const RestAPI: FC<RestApiProps> = ({
   dataSourceId,
   branchId,
@@ -65,20 +73,29 @@ const RestAPI: FC<RestApiProps> = ({
     workosAccessToken ? "workos" : "hasura"
   );
   const [state, setState] = useState<RestApiState>(defaultState);
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>("json");
   const activeToken =
     authMethod === "workos" && workosAccessToken
       ? workosAccessToken
       : accessToken;
+  const buildBody = useCallback(
+    (format: OutputFormat) => {
+      const query = {
+        ...playgroundState,
+        order: normalizeOrders(playgroundState?.order || []),
+      };
+      const body: Record<string, unknown> = { query };
+      if (format !== "json") {
+        body.format = format;
+      }
+      return JSON.stringify(body, null, 2);
+    },
+    [playgroundState]
+  );
+
   const { control, handleSubmit, setValue, getValues, watch } = useForm<any>({
     values: {
-      json: JSON.stringify(
-        {
-          ...playgroundState,
-          order: normalizeOrders(playgroundState?.order || []),
-        },
-        null,
-        2
-      ),
+      json: buildBody(outputFormat),
       "x-hasura-datasource-id": dataSourceId,
       "x-hasura-branch-id": branchId,
       token: `Bearer ${activeToken}`,
@@ -87,39 +104,61 @@ const RestAPI: FC<RestApiProps> = ({
     },
   });
 
+  // Update body when output format changes
+  useEffect(() => {
+    setValue("json", buildBody(outputFormat));
+  }, [outputFormat, buildBody, setValue]);
+
   const onSubmit = async (values: any) => {
     setState({ ...defaultState, loading: true });
 
-    let response: ApiResponse = {};
-
-    const doFetch = async () => {
-      const rawResponse = await fetch(values.url, {
-        method: "POST",
-        headers: {
-          authorization: values.token,
-          "Content-Type": "application/json",
-          "x-hasura-datasource-id": values["x-hasura-datasource-id"],
-          "x-hasura-branch-id": values["x-hasura-branch-id"],
-        },
-        body: JSON.stringify({
-          query: values.json,
-        }),
-      });
-
-      response = await rawResponse.json();
-      if (response?.error === "Continue wait") {
-        setState((prev) => ({ ...prev, loadingTip: response?.error }));
-        await doFetch();
-      }
-    };
+    let responseText = "";
 
     try {
-      await doFetch();
+      const doFetch = async (): Promise<Response> => {
+        return fetch(values.url, {
+          method: "POST",
+          headers: {
+            authorization: values.token,
+            "Content-Type": "application/json",
+            "x-hasura-datasource-id": values["x-hasura-datasource-id"],
+            "x-hasura-branch-id": values["x-hasura-branch-id"],
+          },
+          body: values.json,
+        });
+      };
+
+      if (outputFormat === "csv") {
+        const rawResponse = await doFetch();
+        if (!rawResponse.ok) {
+          const errBody = await rawResponse.json().catch(() => null);
+          responseText = JSON.stringify(
+            errBody || { error: `HTTP ${rawResponse.status}` },
+            null,
+            2
+          );
+        } else {
+          responseText = await rawResponse.text();
+        }
+      } else {
+        // JSON and JSON-Stat both return JSON — handle "Continue wait" polling
+        let response: ApiResponse = {};
+        const doJsonFetch = async () => {
+          const rawResponse = await doFetch();
+          response = await rawResponse.json();
+          if (response?.error === "Continue wait") {
+            setState((prev) => ({ ...prev, loadingTip: response?.error }));
+            await doJsonFetch();
+          }
+        };
+        await doJsonFetch();
+        responseText = JSON.stringify(response, null, 2);
+      }
     } catch (e: any) {
-      response.error = e?.message || e;
+      responseText = JSON.stringify({ error: e?.message || e }, null, 2);
     }
 
-    setValue("response", JSON.stringify(response, null, 2));
+    setValue("response", responseText);
     setState(defaultState);
   };
 
@@ -243,21 +282,35 @@ const RestAPI: FC<RestApiProps> = ({
             </Col>
           </Row>
 
-          <Input
-            className={cn(styles.input)}
-            label={t("common:form.labels.url")}
-            name="url"
-            control={control}
-            addonBefore={<span className={styles.inputBefore}>POST</span>}
-            suffix={
-              <CopyIcon
-                className={styles.copy}
-                onClick={() =>
-                  navigator.clipboard.writeText(getValues("url") || "")
+          <Row gutter={[16, 16]} align="bottom">
+            <Col flex="auto">
+              <Input
+                className={cn(styles.input)}
+                label={t("common:form.labels.url")}
+                name="url"
+                control={control}
+                addonBefore={<span className={styles.inputBefore}>POST</span>}
+                suffix={
+                  <CopyIcon
+                    className={styles.copy}
+                    onClick={() =>
+                      navigator.clipboard.writeText(getValues("url") || "")
+                    }
+                  />
                 }
               />
-            }
-          />
+            </Col>
+            <Col>
+              <Form.Item label="Output Format" className={styles.label}>
+                <Select
+                  value={outputFormat}
+                  onChange={(val: OutputFormat) => setOutputFormat(val)}
+                  options={FORMAT_OPTIONS}
+                  style={{ width: 120 }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
           <Row style={{ width: "100%" }} gutter={10}>
             <Col xs={24} className={styles.textAreaWrapper}>
               <Input
@@ -319,7 +372,7 @@ const RestAPI: FC<RestApiProps> = ({
                 <CopyIcon
                   className={cn(styles.copy, styles.textAreaCopy)}
                   onClick={() =>
-                    navigator.clipboard.writeText(getValues("json") || "")
+                    navigator.clipboard.writeText(getValues("response") || "")
                   }
                 />
               </Col>
