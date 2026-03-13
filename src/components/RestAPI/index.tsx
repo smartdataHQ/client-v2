@@ -17,7 +17,7 @@ import styles from "./index.module.less";
 
 import type { FC } from "react";
 
-type OutputFormat = "json" | "csv" | "jsonstat";
+type OutputFormat = "json" | "csv" | "jsonstat" | "arrow";
 
 const CUBEJS_REST_API_URL =
   window.CUBEJS_REST_API_URL !== undefined
@@ -45,6 +45,12 @@ interface ApiResponse {
   progress?: any;
 }
 
+interface BinaryResponseSummary {
+  contentType: string;
+  fileName: string | null;
+  sizeBytes: number;
+}
+
 const defaultState = {
   loading: false,
 };
@@ -59,8 +65,43 @@ const normalizeOrders = (orders: SortBy[]) => {
 const FORMAT_OPTIONS = [
   { value: "json", label: "JSON" },
   { value: "csv", label: "CSV" },
+  { value: "arrow", label: "Arrow" },
   { value: "jsonstat", label: "JSON-Stat" },
 ];
+
+const ARROW_CONTENT_TYPE = "application/vnd.apache.arrow.stream";
+
+const getFileNameFromDisposition = (header: string | null) => {
+  if (!header) return null;
+
+  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const quotedMatch = header.match(/filename="([^"]+)"/i);
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1];
+  }
+
+  const plainMatch = header.match(/filename=([^;]+)/i);
+  return plainMatch?.[1]?.trim() || null;
+};
+
+const summarizeBinaryResponse = async (response: Response) => {
+  const blob = await response.blob();
+
+  const summary: BinaryResponseSummary = {
+    contentType:
+      response.headers.get("content-type") || "application/octet-stream",
+    fileName: getFileNameFromDisposition(
+      response.headers.get("content-disposition")
+    ),
+    sizeBytes: blob.size,
+  };
+
+  return JSON.stringify(summary, null, 2);
+};
 
 const RestAPI: FC<RestApiProps> = ({
   dataSourceId,
@@ -128,31 +169,56 @@ const RestAPI: FC<RestApiProps> = ({
         });
       };
 
-      if (outputFormat === "csv") {
+      while (true) {
         const rawResponse = await doFetch();
+        const contentType = rawResponse.headers.get("content-type") || "";
+        const isJsonResponse = contentType.includes("application/json");
+        const isCsvResponse = contentType.includes("text/csv");
+        const isArrowResponse = contentType.includes(ARROW_CONTENT_TYPE);
+
         if (!rawResponse.ok) {
-          const errBody = await rawResponse.json().catch(() => null);
-          responseText = JSON.stringify(
-            errBody || { error: `HTTP ${rawResponse.status}` },
-            null,
-            2
-          );
-        } else {
-          responseText = await rawResponse.text();
+          if (isJsonResponse) {
+            const errBody = await rawResponse.json().catch(() => null);
+            responseText = JSON.stringify(
+              errBody || { error: `HTTP ${rawResponse.status}` },
+              null,
+              2
+            );
+          } else {
+            const errorBody = await rawResponse.text().catch(() => "");
+            responseText = JSON.stringify(
+              {
+                error: errorBody || `HTTP ${rawResponse.status}`,
+              },
+              null,
+              2
+            );
+          }
+          break;
         }
-      } else {
-        // JSON and JSON-Stat both return JSON — handle "Continue wait" polling
-        let response: ApiResponse = {};
-        const doJsonFetch = async () => {
-          const rawResponse = await doFetch();
-          response = await rawResponse.json();
+
+        if (isJsonResponse) {
+          const response: ApiResponse = await rawResponse.json();
           if (response?.error === "Continue wait") {
             setState((prev) => ({ ...prev, loadingTip: response?.error }));
-            await doJsonFetch();
+            continue;
           }
-        };
-        await doJsonFetch();
-        responseText = JSON.stringify(response, null, 2);
+          responseText = JSON.stringify(response, null, 2);
+          break;
+        }
+
+        if (isCsvResponse || outputFormat === "csv") {
+          responseText = await rawResponse.text();
+          break;
+        }
+
+        if (isArrowResponse || outputFormat === "arrow") {
+          responseText = await summarizeBinaryResponse(rawResponse);
+          break;
+        }
+
+        responseText = await rawResponse.text();
+        break;
       }
     } catch (e: any) {
       responseText = JSON.stringify({ error: e?.message || e }, null, 2);
