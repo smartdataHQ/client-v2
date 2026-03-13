@@ -1,5 +1,5 @@
 import { Empty, Typography } from "antd";
-import { highlight, languages } from "prismjs";
+import Prism from "prismjs";
 import "prismjs/components/prism-sql";
 import "prismjs/themes/prism-solarizedlight.css";
 
@@ -19,7 +19,7 @@ const PrismCode: FC<PrismCodeProps> = ({ code, lang = "sql", style }) => {
   const [htmlContent, setContent] = useState("");
 
   useEffect(() => {
-    const html = highlight(code, languages[lang], lang);
+    const html = Prism.highlight(code, Prism.languages[lang], lang);
     setContent(html);
   }, [code, lang]);
 
