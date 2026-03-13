@@ -24,7 +24,7 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Build the application (skip postbuild which creates archives we don't need)
-RUN bunx --bun vite build
+RUN ./node_modules/.bin/vite build
 
 # Production stage - use nginx for better performance
 FROM nginx:alpine
