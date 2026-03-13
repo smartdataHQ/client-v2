@@ -40,7 +40,7 @@ import type { FC, ReactNode } from "react";
 import type { MenuProps } from "antd";
 
 const COL_WIDTH = 200;
-const INDEX_COL_WIDTH = 70;
+const INDEX_COL_WIDTH = 80;
 const MIN_COL_WIDTH = 100;
 const PX_PER_CHAR = 8;
 const HEADER_PADDING = 32;
@@ -333,7 +333,7 @@ const VirtualTable: FC<VirtualTableProps> = ({
     const dataKey = (columnData as any).dataKey ?? columnId;
 
     return (
-      <>
+      <div className={styles.headerContent}>
         <Tooltip title={tooltipTitle}>
           <Paragraph ellipsis className={styles.headerParagraph}>
             {shortLabel}
@@ -360,7 +360,7 @@ const VirtualTable: FC<VirtualTableProps> = ({
             <HolderOutlined />
           </div>
         </div>
-      </>
+      </div>
     );
   };
 
@@ -438,10 +438,11 @@ const VirtualTable: FC<VirtualTableProps> = ({
   };
 
   const isEmpty = !columns.length && !rows.length;
+  const TABLE_PADDING = 40;
   const tableWidth = useMemo(() => {
     let tw = flatHeaders.reduce((sum, col) => sum + getColumnWidth(col.id), 0);
     if (!hideIndexColumn) tw += INDEX_COL_WIDTH;
-    return tw;
+    return tw + TABLE_PADDING;
   }, [flatHeaders, getColumnWidth, hideIndexColumn]);
 
   const wrapperWidth = wrapperRef.current?.clientWidth || width;
@@ -493,7 +494,10 @@ const VirtualTable: FC<VirtualTableProps> = ({
                 id={tableId}
                 className={cn(styles.table, tableId && styles.minWidth)}
                 width={effectiveTableWidth}
-                height={height}
+                height={
+                  headerHeight +
+                  Math.floor((height - headerHeight) / rowHeight) * rowHeight
+                }
                 headerHeight={headerHeight}
                 rowHeight={rowHeight}
                 rowCount={rows.length}
