@@ -2,6 +2,7 @@ import { Radio, Select, Spin, Col, Form, Row, Space } from "antd";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import cn from "classnames";
+import { tableFromIPC } from "apache-arrow";
 
 import Input from "@/components/Input";
 import InfoBlock from "@/components/InfoBlock";
@@ -70,6 +71,7 @@ const FORMAT_OPTIONS = [
 ];
 
 const ARROW_CONTENT_TYPE = "application/vnd.apache.arrow.stream";
+const ARROW_PREVIEW_ROWS = 20;
 
 const getFileNameFromDisposition = (header: string | null) => {
   if (!header) return null;
@@ -101,6 +103,97 @@ const summarizeBinaryResponse = async (response: Response) => {
   };
 
   return JSON.stringify(summary, null, 2);
+};
+
+const normalizeArrowValue = (value: unknown): unknown => {
+  if (value == null) return value;
+
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (value instanceof ArrayBuffer) {
+    return Array.from(new Uint8Array(value));
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return Array.from(
+      new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeArrowValue(item));
+  }
+
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        normalizeArrowValue(item),
+      ])
+    );
+  }
+
+  return value;
+};
+
+const summarizeArrowResponse = async (response: Response) => {
+  const bytes = new Uint8Array(await response.arrayBuffer());
+
+  try {
+    const table = tableFromIPC(bytes);
+    const previewRows = table
+      .slice(0, ARROW_PREVIEW_ROWS)
+      .toArray()
+      .map((row) => normalizeArrowValue(row));
+
+    return JSON.stringify(
+      {
+        contentType:
+          response.headers.get("content-type") || "application/octet-stream",
+        fileName: getFileNameFromDisposition(
+          response.headers.get("content-disposition")
+        ),
+        sizeBytes: bytes.byteLength,
+        rowCount: table.numRows,
+        previewRowCount: previewRows.length,
+        schema: table.schema.fields.map((field) => ({
+          name: field.name,
+          type: String(field.type),
+          nullable: field.nullable,
+        })),
+        previewRows,
+      },
+      null,
+      2
+    );
+  } catch (error) {
+    return JSON.stringify(
+      {
+        ...JSON.parse(
+          await summarizeBinaryResponse(
+            new Response(bytes, {
+              headers: {
+                "content-type":
+                  response.headers.get("content-type") ||
+                  "application/octet-stream",
+                "content-disposition":
+                  response.headers.get("content-disposition") || "",
+              },
+            })
+          )
+        ),
+        parseError: error instanceof Error ? error.message : String(error),
+      },
+      null,
+      2
+    );
+  }
 };
 
 const RestAPI: FC<RestApiProps> = ({
@@ -213,7 +306,7 @@ const RestAPI: FC<RestApiProps> = ({
         }
 
         if (isArrowResponse || outputFormat === "arrow") {
-          responseText = await summarizeBinaryResponse(rawResponse);
+          responseText = await summarizeArrowResponse(rawResponse);
           break;
         }
 
