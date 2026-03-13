@@ -383,10 +383,11 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
                     items: [
                       { key: "json", label: "Export JSON" },
                       { key: "csv", label: "Export CSV" },
+                      { key: "arrow", label: "Export Arrow" },
                       { key: "jsonstat", label: "Export JSON-Stat" },
                     ],
                     onClick: ({ key }) =>
-                      exportData(key as "json" | "csv" | "jsonstat"),
+                      exportData(key as "json" | "csv" | "jsonstat" | "arrow"),
                   }}
                   disabled={disableButtons || !explorationId || isExporting}
                 >

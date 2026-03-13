@@ -14,7 +14,7 @@ const GEN_SQL_EXPORT_MUTATION = gql`
   }
 `;
 
-type ExportFormat = "json" | "csv" | "jsonstat";
+type ExportFormat = "json" | "csv" | "jsonstat" | "arrow";
 
 interface ColumnMetadata {
   alias: string;
@@ -45,7 +45,7 @@ export default function useFormatExport({
       setError(null);
 
       try {
-        // Call GenSQL with limit: 0 for CSV/JSON-Stat (unlimited), no limit override for JSON
+        // Call GenSQL with limit: 0 for export formats (unlimited), no limit override for JSON
         const limit = format !== "json" ? 0 : undefined;
         const genSqlResult = await genSqlMutation({
           exploration_id: explorationId,
@@ -111,7 +111,8 @@ export default function useFormatExport({
 
         // Download the response as a file
         const blob = await response.blob();
-        const ext = format === "csv" ? "csv" : "json";
+        const ext =
+          format === "csv" ? "csv" : format === "arrow" ? "arrow" : "json";
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
