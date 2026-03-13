@@ -1,14 +1,14 @@
-// import * as path from 'path';
 import path from "path";
 import fs from "fs";
+import { createRequire } from "module";
 
+// eslint-disable-next-line import/namespace, import/default, import/no-named-as-default, import/no-named-as-default-member
 import react from "@vitejs/plugin-react";
 import vitApp from "@vitjs/vit";
 import { visualizer } from "rollup-plugin-visualizer";
 import autoImport from "unplugin-auto-import/vite";
 import { defineConfig } from "vite";
 import windiCSS from "vite-plugin-windicss";
-import tsconfigPaths from "vite-tsconfig-paths";
 import svgx from "@svgx/vite-plugin-react";
 import monacoEditorPlugin from "vite-plugin-monaco-editor";
 import pluginRewriteAll from "vite-plugin-rewrite-all";
@@ -16,12 +16,14 @@ import copy from "rollup-plugin-copy";
 
 import routes from "./config/routes";
 
+const _require = createRequire(import.meta.url);
+
 const WRONG_CODE = `import { bpfrpt_proptype_WindowScroller } from "../WindowScroller.js";`;
-export function reactVirtualized() {
+function reactVirtualized() {
   return {
     name: "my:react-virtualized",
     configResolved() {
-      const file = require
+      const file = _require
         .resolve("react-virtualized")
         .replace(
           path.join("dist", "commonjs", "index.js"),
@@ -54,7 +56,6 @@ export default defineConfig({
         },
       },
     }),
-    tsconfigPaths(),
     autoImport({
       imports: [
         "react",
@@ -99,6 +100,7 @@ export default defineConfig({
     },
   },
   resolve: {
+    tsconfigPaths: true,
     preserveSymlinks: true,
     alias: [
       // { find: '@', replacement: path.resolve(__dirname, 'src') },
@@ -125,8 +127,13 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          "react-venders": ["react", "react-dom", "@vitjs/runtime"],
+        advancedChunks: {
+          groups: [
+            {
+              name: "react-venders",
+              test: /[\\/]node_modules[\\/](react|react-dom|@vitjs[\\/]runtime)[\\/]/,
+            },
+          ],
         },
       },
     },
