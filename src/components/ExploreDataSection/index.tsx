@@ -79,7 +79,6 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
     disabled,
     loading = false,
     disableButtons,
-    explorationId,
   } = props;
   const { t } = useTranslation(["explore", "common"]);
   const windowSize = useResponsive();
@@ -90,9 +89,9 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
   });
 
   const { exportData, isExporting } = useFormatExport({
-    explorationId,
     datasourceId: dataSource?.id,
-    branchId: currentBranch?.id,
+    branchId: currentBranch?.id || undefined,
+    query: playgroundState,
   });
 
   // const formConfig = {
@@ -389,7 +388,7 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
                     onClick: ({ key }) =>
                       exportData(key as "json" | "csv" | "jsonstat" | "arrow"),
                   }}
-                  disabled={disableButtons || !explorationId || isExporting}
+                  disabled={disableButtons || !dataSource?.id || isExporting}
                 >
                   <Button
                     className={cn(s.csvBtn, isMobile && s.mobileButton)}

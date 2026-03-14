@@ -1,91 +1,94 @@
 import { useState, useCallback } from "react";
-import { useMutation, gql } from "urql";
 import { message } from "antd";
 
 import AuthTokensStore from "@/stores/AuthTokensStore";
-
-const GEN_SQL_EXPORT_MUTATION = gql`
-  mutation GenSQLExport($exploration_id: uuid!, $limit: Int) {
-    gen_sql(exploration_id: $exploration_id, limit: $limit) {
-      result
-      column_metadata
-      sql_signature
-    }
-  }
-`;
+import type { PlaygroundState } from "@/types/exploration";
+import type { SortBy } from "@/types/sort";
 
 type ExportFormat = "json" | "csv" | "jsonstat" | "arrow";
 
-interface ColumnMetadata {
-  alias: string;
-  member: string;
-  role: "measure" | "dimension" | "timeDimension";
-}
-
 interface UseFormatExportOptions {
-  explorationId?: string;
   datasourceId?: string;
   branchId?: string;
+  query?: PlaygroundState;
+}
+
+const normalizeOrders = (orders: SortBy[]) => {
+  return (orders || []).reduce(
+    (acc, cur) => ({ ...acc, [cur.id]: cur.desc ? "desc" : "asc" }),
+    {}
+  );
+};
+
+const getFileNameFromDisposition = (header: string | null) => {
+  if (!header) return null;
+
+  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const quotedMatch = header.match(/filename="([^"]+)"/i);
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1];
+  }
+
+  const plainMatch = header.match(/filename=([^;]+)/i);
+  return plainMatch?.[1]?.trim() || null;
+};
+
+const getDefaultFileName = (format: ExportFormat) => {
+  const ext = format === "csv" ? "csv" : format === "arrow" ? "arrow" : "json";
+  return `query-result.${ext}`;
+};
+
+const buildLoadRequestBody = (format: ExportFormat, query: PlaygroundState) => {
+  const body: Record<string, unknown> = {
+    query: {
+      ...query,
+      order: normalizeOrders(query?.order || []),
+    },
+  };
+
+  if (format !== "json") {
+    body.format = format;
+  }
+
+  return body;
+};
+
+async function downloadResponse(response: Response, format: ExportFormat) {
+  const blob = await response.blob();
+  const fileName =
+    getFileNameFromDisposition(response.headers.get("content-disposition")) ||
+    getDefaultFileName(format);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export default function useFormatExport({
-  explorationId,
   datasourceId,
   branchId,
+  query,
 }: UseFormatExportOptions) {
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [, genSqlMutation] = useMutation(GEN_SQL_EXPORT_MUTATION);
 
   const exportData = useCallback(
     async (format: ExportFormat) => {
-      if (!explorationId || !datasourceId) return;
+      if (!query || !datasourceId) return;
 
       setIsExporting(true);
       setError(null);
 
       try {
-        // Call GenSQL with limit: 0 for export formats (unlimited), no limit override for JSON
-        const limit = format !== "json" ? 0 : undefined;
-        const genSqlResult = await genSqlMutation({
-          exploration_id: explorationId,
-          limit,
-        });
-
-        if (genSqlResult.error) {
-          throw new Error(genSqlResult.error.message);
-        }
-
-        const { result, column_metadata, sql_signature } =
-          genSqlResult.data?.gen_sql || {};
-        const sql = result?.sql;
-
-        if (!sql) {
-          throw new Error("Failed to generate SQL");
-        }
-
-        // Build run-sql request body — include sql_signature so run-sql
-        // can verify this SQL was generated internally by gen_sql
-        const body: Record<string, unknown> = {
-          query: sql,
-          format,
-          sql_signature,
-        };
-
-        // For JSON-Stat, pass measure and timeDimension aliases as hints
-        if (format === "jsonstat" && column_metadata) {
-          const metadata = column_metadata as ColumnMetadata[];
-          body.measures = metadata
-            .filter((c) => c.role === "measure")
-            .map((c) => c.alias);
-          body.timeDimensions = metadata
-            .filter((c) => c.role === "timeDimension")
-            .map((c) => c.alias);
-        }
-
-        // Get JWT token from Zustand store
         const token = AuthTokensStore.getState().accessToken;
-
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
           "x-hasura-datasource-id": datasourceId,
@@ -93,34 +96,56 @@ export default function useFormatExport({
         if (token) headers.Authorization = `Bearer ${token}`;
         if (branchId) headers["x-hasura-branch-id"] = branchId;
 
-        // Call run-sql directly via the /api/v1/* proxy
-        const response = await fetch("/api/v1/run-sql", {
-          method: "POST",
-          headers,
-          body: JSON.stringify(body),
-        });
+        const body = buildLoadRequestBody(format, query);
 
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => null);
-          throw new Error(
-            errorBody?.message ||
-              errorBody?.error ||
-              `Export failed (${response.status})`
-          );
+        while (true) {
+          const response = await fetch("/api/v1/load", {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+          });
+          const contentType = response.headers.get("content-type") || "";
+          const isJsonResponse = contentType.includes("application/json");
+
+          if (!response.ok) {
+            const errorBody = isJsonResponse
+              ? await response.json().catch(() => null)
+              : null;
+            throw new Error(
+              errorBody?.message ||
+                errorBody?.error ||
+                `Export failed (${response.status})`
+            );
+          }
+
+          if (isJsonResponse) {
+            const responseBody = await response.json().catch(() => null);
+            if (responseBody?.error === "Continue wait") {
+              continue;
+            }
+
+            if (format === "json" || format === "jsonstat") {
+              const jsonBlob = new Blob(
+                [JSON.stringify(responseBody, null, 2)],
+                { type: "application/json" }
+              );
+              await downloadResponse(
+                new Response(jsonBlob, {
+                  headers: response.headers,
+                }),
+                format
+              );
+              break;
+            }
+
+            throw new Error(
+              responseBody?.message || responseBody?.error || "Export failed"
+            );
+          }
+
+          await downloadResponse(response, format);
+          break;
         }
-
-        // Download the response as a file
-        const blob = await response.blob();
-        const ext =
-          format === "csv" ? "csv" : format === "arrow" ? "arrow" : "json";
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `query-result.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Export failed";
         setError(msg);
@@ -129,7 +154,7 @@ export default function useFormatExport({
         setIsExporting(false);
       }
     },
-    [explorationId, datasourceId, branchId, genSqlMutation]
+    [datasourceId, branchId, query]
   );
 
   return { exportData, isExporting, error };
