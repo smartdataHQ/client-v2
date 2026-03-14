@@ -71,6 +71,10 @@ const FORMAT_OPTIONS = [
 ];
 
 const ARROW_CONTENT_TYPE = "application/vnd.apache.arrow.stream";
+const ARROW_FIELD_MAPPING_HEADER = "x-synmetrix-arrow-field-mapping";
+const ARROW_FIELD_MAPPING_ENCODING_HEADER =
+  "x-synmetrix-arrow-field-mapping-encoding";
+const ARROW_FIELD_MAPPING_ENCODING = "base64url-json";
 const ARROW_PREVIEW_ROWS = 20;
 
 const getFileNameFromDisposition = (header: string | null) => {
@@ -142,8 +146,41 @@ const normalizeArrowValue = (value: unknown): unknown => {
   return value;
 };
 
+const decodeBase64Url = (value: string) => {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(
+    normalized.length + ((4 - (normalized.length % 4)) % 4),
+    "="
+  );
+  return atob(padded);
+};
+
+const getArrowFieldMapping = (response: Response) => {
+  const encodedMapping = response.headers.get(ARROW_FIELD_MAPPING_HEADER);
+  const encoding = response.headers.get(ARROW_FIELD_MAPPING_ENCODING_HEADER);
+
+  if (!encodedMapping) return null;
+
+  if (!encoding || encoding === ARROW_FIELD_MAPPING_ENCODING) {
+    return {
+      encoding: ARROW_FIELD_MAPPING_ENCODING,
+      mapping: JSON.parse(decodeBase64Url(encodedMapping)) as Record<
+        string,
+        string
+      >,
+    };
+  }
+
+  return {
+    encoding,
+    mapping: null,
+    error: `Unsupported Arrow field mapping encoding: ${encoding}`,
+  };
+};
+
 const summarizeArrowResponse = async (response: Response) => {
   const bytes = new Uint8Array(await response.arrayBuffer());
+  const fieldMappingInfo = getArrowFieldMapping(response);
 
   try {
     const table = tableFromIPC(bytes);
@@ -167,6 +204,17 @@ const summarizeArrowResponse = async (response: Response) => {
           type: String(field.type),
           nullable: field.nullable,
         })),
+        semanticSchema: fieldMappingInfo?.mapping
+          ? table.schema.fields.map((field) => ({
+              name: fieldMappingInfo.mapping?.[field.name] || field.name,
+              sourceName: field.name,
+              type: String(field.type),
+              nullable: field.nullable,
+            }))
+          : undefined,
+        fieldMappingEncoding: fieldMappingInfo?.encoding,
+        fieldMapping: fieldMappingInfo?.mapping,
+        fieldMappingError: fieldMappingInfo?.error,
         previewRows,
       },
       null,
@@ -189,6 +237,9 @@ const summarizeArrowResponse = async (response: Response) => {
           )
         ),
         parseError: error instanceof Error ? error.message : String(error),
+        fieldMappingEncoding: fieldMappingInfo?.encoding,
+        fieldMapping: fieldMappingInfo?.mapping,
+        fieldMappingError: fieldMappingInfo?.error,
       },
       null,
       2
