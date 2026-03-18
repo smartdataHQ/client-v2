@@ -16,6 +16,7 @@ import {
 import { useMutation, useQuery } from "urql";
 
 import usePortalAdmin from "@/hooks/usePortalAdmin";
+import CurrentUserStore from "@/stores/CurrentUserStore";
 
 const { Title, Text } = Typography;
 
@@ -78,6 +79,7 @@ interface TeamOption {
 
 const AdminMemberProperties: React.FC = () => {
   const { isPortalAdmin } = usePortalAdmin();
+  const { currentTeam } = CurrentUserStore();
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<MemberInfo | null>(null);
@@ -104,6 +106,18 @@ const AdminMemberProperties: React.FC = () => {
   useEffect(() => {
     if (isPortalAdmin) fetchTeams();
   }, [isPortalAdmin]);
+
+  useEffect(() => {
+    // Default to the user's active team once team options are available.
+    // Keep manual selection untouched.
+    if (selectedTeamId || teams.length === 0) return;
+    const currentTeamId = currentTeam?.id;
+    if (currentTeamId && teams.some((team) => team.id === currentTeamId)) {
+      setSelectedTeamId(currentTeamId);
+      return;
+    }
+    setSelectedTeamId(teams[0].id);
+  }, [teams, currentTeam?.id, selectedTeamId]);
 
   if (!isPortalAdmin) {
     return (
