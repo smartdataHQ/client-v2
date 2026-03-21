@@ -77,9 +77,53 @@ export function getCompletions(
     case "member_body":
       return getMemberBodyCompletions(context, format);
     case "property_value":
-      return getPropertyValueCompletions(context);
+      return getPropertyValueCompletions(context, registry);
     case "sql":
       return getSqlCompletions(context, registry);
+    case "unknown": {
+      if (format === "yaml") {
+        return [
+          {
+            label: "cubes",
+            kind: "snippet",
+            insertText:
+              'cubes:\n  - name: $1\n    sql_table: $2\n\n    dimensions:\n      - name: $3\n        sql: "${CUBE}.$4"\n        type: $5\n',
+            isSnippet: true,
+            documentation: "Create a new cube definition",
+            detail: "cube template",
+          },
+          {
+            label: "views",
+            kind: "snippet",
+            insertText:
+              'views:\n  - name: $1\n    cubes:\n      - join_path: $2\n        includes: "*"\n',
+            isSnippet: true,
+            documentation: "Create a new view definition",
+            detail: "view template",
+          },
+        ];
+      }
+      return [
+        {
+          label: "cube",
+          kind: "snippet",
+          insertText:
+            "cube(`$1`, {\n  sql_table: `$2`,\n\n  dimensions: {\n    $3: {\n      sql: `${CUBE}.$4`,\n      type: `$5`,\n    },\n  },\n});\n",
+          isSnippet: true,
+          documentation: "Create a new cube definition",
+          detail: "cube template",
+        },
+        {
+          label: "view",
+          kind: "snippet",
+          insertText:
+            "view(`$1`, {\n  cubes: {\n    $2: {\n      includes: `*`,\n    },\n  },\n});\n",
+          isSnippet: true,
+          documentation: "Create a new view definition",
+          detail: "view template",
+        },
+      ];
+    }
     default:
       return [];
   }
@@ -127,131 +171,219 @@ function getMemberListCompletions(
   const items: CompletionItem[] = [];
 
   if (format === "yaml") {
-    items.push(getYamlMemberSkeleton(normalized));
+    items.push(...getYamlMemberSkeletons(normalized));
   } else {
-    items.push(getJsMemberSkeleton(normalized));
+    items.push(...getJsMemberSkeletons(normalized));
   }
 
   return items;
 }
 
-function getYamlMemberSkeleton(memberType: string): CompletionItem {
+function getYamlMemberSkeletons(memberType: string): CompletionItem[] {
   switch (memberType) {
     case "dimensions":
-      return {
-        label: "new dimension",
-        kind: "snippet",
-        insertText: "- name: $1\n  sql: ${CUBE}.$2\n  type: $3",
-        isSnippet: true,
-        documentation: "Add a new dimension",
-        detail: "dimension skeleton",
-      };
+      return [
+        {
+          label: "new string dimension",
+          kind: "snippet",
+          insertText: '- name: $1\n  sql: "${CUBE}.$2"\n  type: string',
+          isSnippet: true,
+          documentation: "Add a string dimension",
+          detail: "dimension",
+        },
+        {
+          label: "new time dimension",
+          kind: "snippet",
+          insertText: '- name: $1\n  sql: "${CUBE}.$2"\n  type: time',
+          isSnippet: true,
+          documentation: "Add a time dimension",
+          detail: "dimension",
+        },
+        {
+          label: "new number dimension",
+          kind: "snippet",
+          insertText: '- name: $1\n  sql: "${CUBE}.$2"\n  type: number',
+          isSnippet: true,
+          documentation: "Add a number dimension",
+          detail: "dimension",
+        },
+      ];
     case "measures":
-      return {
-        label: "new measure",
-        kind: "snippet",
-        insertText: "- name: $1\n  type: $2\n  sql: $3",
-        isSnippet: true,
-        documentation: "Add a new measure",
-        detail: "measure skeleton",
-      };
+      return [
+        {
+          label: "new count measure",
+          kind: "snippet",
+          insertText: "- name: $1\n  type: count",
+          isSnippet: true,
+          documentation: "Add a count measure",
+          detail: "measure",
+        },
+        {
+          label: "new sum measure",
+          kind: "snippet",
+          insertText: '- name: $1\n  type: sum\n  sql: "${CUBE}.$2"',
+          isSnippet: true,
+          documentation: "Add a sum measure",
+          detail: "measure",
+        },
+        {
+          label: "new avg measure",
+          kind: "snippet",
+          insertText: '- name: $1\n  type: avg\n  sql: "${CUBE}.$2"',
+          isSnippet: true,
+          documentation: "Add an avg measure",
+          detail: "measure",
+        },
+      ];
     case "joins":
-      return {
-        label: "new join",
-        kind: "snippet",
-        insertText:
-          "- name: $1\n  sql: ${CUBE}.$2 = ${$3.$4}\n  relationship: $5",
-        isSnippet: true,
-        documentation: "Add a new join",
-        detail: "join skeleton",
-      };
+      return [
+        {
+          label: "new join",
+          kind: "snippet",
+          insertText:
+            "- name: $1\n  sql: ${CUBE}.$2 = ${$3.$4}\n  relationship: $5",
+          isSnippet: true,
+          documentation: "Add a new join",
+          detail: "join skeleton",
+        },
+      ];
     case "segments":
-      return {
-        label: "new segment",
-        kind: "snippet",
-        insertText: "- name: $1\n  sql: $2",
-        isSnippet: true,
-        documentation: "Add a new segment",
-        detail: "segment skeleton",
-      };
+      return [
+        {
+          label: "new segment",
+          kind: "snippet",
+          insertText: "- name: $1\n  sql: $2",
+          isSnippet: true,
+          documentation: "Add a new segment",
+          detail: "segment skeleton",
+        },
+      ];
     case "preAggregations":
-      return {
-        label: "new pre-aggregation",
-        kind: "snippet",
-        insertText:
-          "- name: $1\n  type: rollup\n  measures: $2\n  dimensions: $3",
-        isSnippet: true,
-        documentation: "Add a new pre-aggregation",
-        detail: "pre-aggregation skeleton",
-      };
+      return [
+        {
+          label: "new pre-aggregation",
+          kind: "snippet",
+          insertText:
+            "- name: $1\n  type: rollup\n  measures: $2\n  dimensions: $3",
+          isSnippet: true,
+          documentation: "Add a new pre-aggregation",
+          detail: "pre-aggregation skeleton",
+        },
+      ];
     default:
-      return {
-        label: "new member",
-        kind: "snippet",
-        insertText: "- name: $1",
-        isSnippet: true,
-        documentation: "Add a new member",
-      };
+      return [
+        {
+          label: "new member",
+          kind: "snippet",
+          insertText: "- name: $1",
+          isSnippet: true,
+          documentation: "Add a new member",
+        },
+      ];
   }
 }
 
-function getJsMemberSkeleton(memberType: string): CompletionItem {
+function getJsMemberSkeletons(memberType: string): CompletionItem[] {
   switch (memberType) {
     case "dimensions":
-      return {
-        label: "new dimension",
-        kind: "snippet",
-        insertText: "$1: {\n  sql: `${CUBE}.$2`,\n  type: `$3`,\n}",
-        isSnippet: true,
-        documentation: "Add a new dimension",
-        detail: "dimension skeleton",
-      };
+      return [
+        {
+          label: "new string dimension",
+          kind: "snippet",
+          insertText: "$1: {\n  sql: `${CUBE}.$2`,\n  type: `string`,\n}",
+          isSnippet: true,
+          documentation: "Add a string dimension",
+          detail: "dimension",
+        },
+        {
+          label: "new time dimension",
+          kind: "snippet",
+          insertText: "$1: {\n  sql: `${CUBE}.$2`,\n  type: `time`,\n}",
+          isSnippet: true,
+          documentation: "Add a time dimension",
+          detail: "dimension",
+        },
+        {
+          label: "new number dimension",
+          kind: "snippet",
+          insertText: "$1: {\n  sql: `${CUBE}.$2`,\n  type: `number`,\n}",
+          isSnippet: true,
+          documentation: "Add a number dimension",
+          detail: "dimension",
+        },
+      ];
     case "measures":
-      return {
-        label: "new measure",
-        kind: "snippet",
-        insertText: "$1: {\n  type: `$2`,\n  sql: `$3`,\n}",
-        isSnippet: true,
-        documentation: "Add a new measure",
-        detail: "measure skeleton",
-      };
+      return [
+        {
+          label: "new count measure",
+          kind: "snippet",
+          insertText: "$1: {\n  type: `count`,\n}",
+          isSnippet: true,
+          documentation: "Add a count measure",
+          detail: "measure",
+        },
+        {
+          label: "new sum measure",
+          kind: "snippet",
+          insertText: "$1: {\n  type: `sum`,\n  sql: `${CUBE}.$2`,\n}",
+          isSnippet: true,
+          documentation: "Add a sum measure",
+          detail: "measure",
+        },
+        {
+          label: "new avg measure",
+          kind: "snippet",
+          insertText: "$1: {\n  type: `avg`,\n  sql: `${CUBE}.$2`,\n}",
+          isSnippet: true,
+          documentation: "Add an avg measure",
+          detail: "measure",
+        },
+      ];
     case "joins":
-      return {
-        label: "new join",
-        kind: "snippet",
-        insertText:
-          "$1: {\n  sql: `${CUBE}.$2 = ${$3.$4}`,\n  relationship: `$5`,\n}",
-        isSnippet: true,
-        documentation: "Add a new join",
-        detail: "join skeleton",
-      };
+      return [
+        {
+          label: "new join",
+          kind: "snippet",
+          insertText:
+            "$1: {\n  sql: `${CUBE}.$2 = ${$3.$4}`,\n  relationship: `$5`,\n}",
+          isSnippet: true,
+          documentation: "Add a new join",
+          detail: "join skeleton",
+        },
+      ];
     case "segments":
-      return {
-        label: "new segment",
-        kind: "snippet",
-        insertText: "$1: {\n  sql: `$2`,\n}",
-        isSnippet: true,
-        documentation: "Add a new segment",
-        detail: "segment skeleton",
-      };
+      return [
+        {
+          label: "new segment",
+          kind: "snippet",
+          insertText: "$1: {\n  sql: `$2`,\n}",
+          isSnippet: true,
+          documentation: "Add a new segment",
+          detail: "segment skeleton",
+        },
+      ];
     case "preAggregations":
-      return {
-        label: "new pre-aggregation",
-        kind: "snippet",
-        insertText:
-          "$1: {\n  type: `rollup`,\n  measures: $2,\n  dimensions: $3,\n}",
-        isSnippet: true,
-        documentation: "Add a new pre-aggregation",
-        detail: "pre-aggregation skeleton",
-      };
+      return [
+        {
+          label: "new pre-aggregation",
+          kind: "snippet",
+          insertText:
+            "$1: {\n  type: `rollup`,\n  measures: $2,\n  dimensions: $3,\n}",
+          isSnippet: true,
+          documentation: "Add a new pre-aggregation",
+          detail: "pre-aggregation skeleton",
+        },
+      ];
     default:
-      return {
-        label: "new member",
-        kind: "snippet",
-        insertText: "$1: {\n}",
-        isSnippet: true,
-        documentation: "Add a new member",
-      };
+      return [
+        {
+          label: "new member",
+          kind: "snippet",
+          insertText: "$1: {\n}",
+          isSnippet: true,
+          documentation: "Add a new member",
+        },
+      ];
   }
 }
 
@@ -361,7 +493,8 @@ function resolveNestedChildren(
 // ---------------------------------------------------------------------------
 
 function getPropertyValueCompletions(
-  context: Extract<CursorContext, { type: "property_value" }>
+  context: Extract<CursorContext, { type: "property_value" }>,
+  registry: CubeRegistry
 ): CompletionItem[] {
   // Find the property spec by key (try both formats)
   const propSpec = findPropertySpec(context.propertyKey, context.memberType);
@@ -375,6 +508,31 @@ function getPropertyValueCompletions(
       documentation: propSpec.description,
       sortText: String(i).padStart(4, "0"),
     }));
+  }
+
+  // Reference values — suggest cube members from registry
+  if (propSpec.type === "reference" && propSpec.referenceType) {
+    const items: CompletionItem[] = [];
+    for (const cube of registry.getAllEntries()) {
+      const members =
+        propSpec.referenceType === "dimension"
+          ? cube.dimensions
+          : propSpec.referenceType === "measure"
+          ? cube.measures
+          : propSpec.referenceType === "segment"
+          ? cube.segments
+          : [];
+      for (const m of members) {
+        items.push({
+          label: `${cube.name}.${m.name}`,
+          kind: "reference",
+          insertText: `${cube.name}.${m.name}`,
+          documentation: `${propSpec.referenceType} (${m.type})`,
+          detail: cube.name,
+        });
+      }
+    }
+    return items;
   }
 
   return [];
@@ -465,21 +623,45 @@ function getSqlCompletions(
       return items;
     }
 
-    // If prefix starts with "CUBE.", return nothing (CUBE doesn't have member access in completions)
     if (cubeName === "CUBE") {
-      return [];
+      // Suggest table columns for the current cube's source table.
+      const cubeNameLower = context.cubeName?.toLowerCase() || "";
+      for (const tableKey of registry.getAllTableKeys()) {
+        const tableName = tableKey.split(".").pop()?.toLowerCase() || "";
+        if (
+          tableName === cubeNameLower ||
+          tableName.includes(cubeNameLower) ||
+          cubeNameLower.includes(tableName)
+        ) {
+          const columns = registry.getTableColumns(tableKey);
+          for (const col of columns) {
+            items.push({
+              label: col.name,
+              kind: "reference",
+              insertText: col.name,
+              documentation: `Column (${col.type}) from ${tableKey}`,
+              detail: col.type,
+            });
+          }
+          break;
+        }
+      }
+      return items;
     }
 
     return [];
   }
 
   // No dot — suggest template variables and cube names from registry
+  // When NOT inside a template literal (${...}), wrap with ${}
+  const wrapTemplate = !context.isTemplateLiteral;
   for (const tv of cubeJsSpec.templateVariables) {
     if (!prefix || tv.name.startsWith(prefix)) {
+      const rawText = tv.snippet ?? tv.name;
       items.push({
-        label: tv.name,
+        label: wrapTemplate ? `\${${tv.name}}` : tv.name,
         kind: "variable",
-        insertText: tv.snippet ?? tv.name,
+        insertText: wrapTemplate ? `\${${rawText}}` : rawText,
         isSnippet: tv.snippet !== tv.name,
         documentation: tv.description,
         detail: "template variable",
@@ -487,16 +669,44 @@ function getSqlCompletions(
     }
   }
 
-  // Also suggest cube names from registry
+  // Also suggest cube names from registry (wrapped in ${} when outside template literal)
   for (const cubeName of registry.getAllCubeNames()) {
     if (!prefix || cubeName.startsWith(prefix)) {
       items.push({
-        label: cubeName,
+        label: wrapTemplate ? `\${${cubeName}}` : cubeName,
         kind: "reference",
-        insertText: cubeName,
+        insertText: wrapTemplate ? `\${${cubeName}}` : cubeName,
         documentation: "Cube reference",
         detail: "cube",
       });
+    }
+  }
+
+  // Suggest column names from the current cube's source table (lower priority)
+  const cubeNameLower = context.cubeName?.toLowerCase() || "";
+  for (const tableKey of registry.getAllTableKeys()) {
+    const tableName = tableKey.split(".").pop()?.toLowerCase() || "";
+    if (
+      tableName === cubeNameLower ||
+      tableName.includes(cubeNameLower) ||
+      cubeNameLower.includes(tableName)
+    ) {
+      for (const col of registry.getTableColumns(tableKey)) {
+        if (
+          !prefix ||
+          col.name.toLowerCase().startsWith(prefix.toLowerCase())
+        ) {
+          items.push({
+            label: col.name,
+            kind: "reference",
+            insertText: col.name,
+            documentation: `Column (${col.type}) from ${tableKey}`,
+            detail: "column",
+            sortText: "zz" + col.name,
+          });
+        }
+      }
+      break;
     }
   }
 
@@ -520,7 +730,7 @@ export function createCompletionProvider(registry: CubeRegistry): {
   provideCompletionItems: (model: any, position: any, ...args: any[]) => any;
 } {
   return {
-    triggerCharacters: [".", "$", ":"],
+    triggerCharacters: [".", "$", ":", " ", "{"],
     provideCompletionItems(model: any, position: any) {
       const code = model.getValue();
       const languageId = model.getLanguageId();

@@ -204,8 +204,10 @@ query ProfileTable(
       file_name
       file_format
       has_user_content
+      has_ai_metrics
       supports_reprofile
       suggested_merge_strategy
+      previous_filters
     }
     raw_profile
   }
@@ -221,6 +223,11 @@ mutation SmartGenDataSchemas(
   $merge_strategy: String
   $profile_data: jsonb
   $dry_run: Boolean
+  $filters: [FilterConditionInput]
+  $file_name: String
+  $cube_name: String
+  $selected_ai_metrics: [String]
+  $selected_columns: [String]
 ) {
   smart_gen_dataschemas(
     datasource_id: $datasource_id
@@ -232,6 +239,11 @@ mutation SmartGenDataSchemas(
     merge_strategy: $merge_strategy
     profile_data: $profile_data
     dry_run: $dry_run
+    filters: $filters
+    file_name: $file_name
+    cube_name: $cube_name
+    selected_ai_metrics: $selected_ai_metrics
+    selected_columns: $selected_columns
   ) {
     code
     message
@@ -239,6 +251,9 @@ mutation SmartGenDataSchemas(
     file_name
     changed
     change_preview
+    ai_enrichment
+    model_validation
+    previous_filters
   }
 }
 

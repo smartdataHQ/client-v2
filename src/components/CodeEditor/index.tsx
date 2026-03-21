@@ -11,6 +11,7 @@ import Button from "@/components/Button";
 import NoModels from "@/components/NoModels";
 import SQLRunner from "@/components/SQLRunner";
 import Console from "@/components/Console";
+import type { ConsoleError } from "@/components/Console";
 import { MONACO_OPTIONS } from "@/utils/constants/monaco";
 import type { Dataschema } from "@/types/dataschema";
 import equals from "@/utils/helpers/equals";
@@ -49,7 +50,7 @@ interface CodeEditorProps {
   sqlError?: object;
   showConsole?: boolean;
   toggleConsole?: () => void;
-  validationError: string;
+  validationError: string | ConsoleError[];
   cubeRegistry?: CubeRegistry;
   onRefreshRegistry?: () => void;
 }
@@ -86,6 +87,9 @@ const CodeEditor: FC<CodeEditorProps> = ({
   > | null>(null);
   const editorInstanceRef = useRef<any>(null);
   const monacoInstanceRef = useRef<any>(null);
+  const aiDecorationsRef = useRef<any>(null);
+  const aiHoverDisposableRef = useRef<any>(null);
+  const onSaveRef = useRef<() => void>(() => {});
   const [specVersionWarning, setSpecVersionWarning] = useState<string | null>(
     null
   );
@@ -138,12 +142,15 @@ const CodeEditor: FC<CodeEditorProps> = ({
     getFilesContent()
   );
 
-  // Determine if the active file is a YAML smart-generated model
+  // Determine if the active file is a smart-generated model (YAML or JS)
   const activeFileExt = active ? active.split(".").pop()?.toLowerCase() : null;
-  const isYamlFile = activeFileExt === "yml" || activeFileExt === "yaml";
+  const isModelFile =
+    activeFileExt === "yml" ||
+    activeFileExt === "yaml" ||
+    activeFileExt === "js";
   const activeContent = active && content?.[active] ? content[active] : "";
   const showRegenerateButton =
-    isYamlFile && isSmartGenerated(activeContent) && !!onRegenerate;
+    isModelFile && isSmartGenerated(activeContent) && !!onRegenerate;
 
   const activeProvenance = showRegenerateButton
     ? parseProvenance(activeContent)
@@ -223,6 +230,8 @@ const CodeEditor: FC<CodeEditorProps> = ({
     [schemas]
   );
 
+  onSaveRef.current = onSave;
+
   // Clean up completion and diagnostic providers on unmount
   useTrackedEffect(() => {
     return () => {
@@ -237,6 +246,10 @@ const CodeEditor: FC<CodeEditorProps> = ({
       if (diagnosticProviderRef.current) {
         diagnosticProviderRef.current.dispose();
         diagnosticProviderRef.current = null;
+      }
+      if (aiHoverDisposableRef.current) {
+        aiHoverDisposableRef.current.dispose();
+        aiHoverDisposableRef.current = null;
       }
     };
   }, []);
@@ -309,27 +322,204 @@ const CodeEditor: FC<CodeEditorProps> = ({
         }));
         monaco.editor.setModelMarkers(model as any, owner, monacoMarkers);
       },
+      validateOnBackend: async (schemaFiles) => {
+        try {
+          const res = await fetch("/api/v1/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ files: schemaFiles }),
+          });
+          if (!res.ok) return [];
+          const result = await res.json();
+          return [...(result.errors || []), ...(result.warnings || [])];
+        } catch {
+          return [];
+        }
+      },
     });
 
     // Wire up content change listener for diagnostics
-    const model = _editor.getModel();
-    if (model && diagnosticProviderRef.current) {
+    const editorModel = _editor.getModel();
+    if (editorModel && diagnosticProviderRef.current) {
       const parseForModel = (modelContent: string) => {
-        const path = model.uri?.path || "";
+        const path = editorModel.uri?.path || "";
         if (path.endsWith(".yml") || path.endsWith(".yaml")) {
           return parseYamlDocument(modelContent);
         }
         return parseJsDocument(modelContent);
       };
       // Run initial validation
-      diagnosticProviderRef.current.onContentChange(model, parseForModel);
+      diagnosticProviderRef.current.onContentChange(editorModel, parseForModel);
       // Listen for subsequent changes
       _editor.onDidChangeModelContent(() => {
         if (diagnosticProviderRef.current) {
-          diagnosticProviderRef.current.onContentChange(model, parseForModel);
+          diagnosticProviderRef.current.onContentChange(
+            editorModel,
+            parseForModel
+          );
         }
       });
     }
+
+    // --- AI metric decorations (T036) ---
+    const updateAIDecorations = (ed: any, mon: any) => {
+      const mdl = ed.getModel();
+      if (!mdl) return;
+      const lines = mdl.getValue().split("\n");
+      const decorations: any[] = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (
+          line.includes("ai_generated: true") ||
+          line.includes("ai_generated:true")
+        ) {
+          // Find the extent of this AI metric block: scan backwards for the
+          // field name (a line at equal or lesser indent that looks like a YAML
+          // key), and forwards until indent returns to that level.
+          const indent = line.search(/\S/);
+          let blockStart = i;
+          for (let b = i - 1; b >= 0; b--) {
+            const bIndent = lines[b].search(/\S/);
+            if (bIndent < 0) continue; // blank line
+            if (bIndent < indent) {
+              blockStart = b;
+              break;
+            }
+            blockStart = b;
+          }
+          let blockEnd = i;
+          for (let e = i + 1; e < lines.length; e++) {
+            const eIndent = lines[e].search(/\S/);
+            if (eIndent < 0) continue; // blank line
+            if (eIndent <= indent && !lines[e].trim().startsWith("#")) break;
+            blockEnd = e;
+          }
+
+          for (let d = blockStart; d <= blockEnd; d++) {
+            decorations.push({
+              range: new mon.Range(d + 1, 1, d + 1, 1),
+              options: {
+                isWholeLine: true,
+                className: "ai-metric-line-decoration",
+                glyphMarginClassName: "ai-metric-glyph",
+                glyphMarginHoverMessage: { value: "AI-generated metric" },
+              },
+            });
+          }
+        }
+      }
+
+      if (aiDecorationsRef.current) {
+        aiDecorationsRef.current = ed.deltaDecorations(
+          aiDecorationsRef.current,
+          decorations
+        );
+      } else {
+        aiDecorationsRef.current = ed.deltaDecorations([], decorations);
+      }
+    };
+
+    // Apply initial decorations and update on content changes
+    updateAIDecorations(_editor, monaco);
+    _editor.onDidChangeModelContent(() => {
+      updateAIDecorations(_editor, monaco);
+    });
+
+    // --- AI metric hover provider (T036) ---
+    if (aiHoverDisposableRef.current) {
+      aiHoverDisposableRef.current.dispose();
+    }
+    const aiHoverProvider = {
+      provideHover(hoverModel: any, position: any) {
+        const lineNumber = position.lineNumber;
+        const totalLines = hoverModel.getLineCount();
+        const currentLine = hoverModel.getLineContent(lineNumber);
+
+        // Check if cursor is on or near an ai_generated: true line
+        const searchRadius = 15;
+        const startLine = Math.max(1, lineNumber - searchRadius);
+        const endLine = Math.min(totalLines, lineNumber + searchRadius);
+
+        let foundAiLine = -1;
+        for (let l = startLine; l <= endLine; l++) {
+          const text = hoverModel.getLineContent(l);
+          if (
+            text.includes("ai_generated: true") ||
+            text.includes("ai_generated:true")
+          ) {
+            // Use closest match
+            if (
+              foundAiLine < 0 ||
+              Math.abs(l - lineNumber) < Math.abs(foundAiLine - lineNumber)
+            ) {
+              foundAiLine = l;
+            }
+          }
+        }
+
+        if (foundAiLine < 0) return null;
+
+        // Check that cursor line is within the same block
+        const aiLineContent = hoverModel.getLineContent(foundAiLine);
+        const aiIndent = aiLineContent.search(/\S/);
+        const curIndent = currentLine.search(/\S/);
+        if (curIndent < 0) return null;
+
+        // Cursor must be at same or deeper indent within the block
+        const isInBlock =
+          lineNumber === foundAiLine ||
+          (curIndent >= aiIndent &&
+            Math.abs(lineNumber - foundAiLine) <= searchRadius);
+        if (!isInBlock) return null;
+
+        // Search nearby lines for ai_generation_context
+        let contextValue: string | null = null;
+        for (
+          let c = Math.max(1, foundAiLine - 5);
+          c <= Math.min(totalLines, foundAiLine + 10);
+          c++
+        ) {
+          const cText = hoverModel.getLineContent(c);
+          const match = cText.match(/ai_generation_context:\s*(.+)/);
+          if (match) {
+            contextValue = match[1].trim().replace(/^["']|["']$/g, "");
+            break;
+          }
+        }
+
+        if (!contextValue) return null;
+
+        return {
+          range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+          contents: [
+            {
+              value: `**AI Generation Context**\n\n${contextValue}`,
+            },
+          ],
+        };
+      },
+    };
+
+    const yamlAiHover = monaco.languages.registerHoverProvider(
+      "yaml",
+      aiHoverProvider
+    );
+    const jsAiHover = monaco.languages.registerHoverProvider(
+      "javascript",
+      aiHoverProvider
+    );
+    aiHoverDisposableRef.current = {
+      dispose() {
+        yamlAiHover.dispose();
+        jsAiHover.dispose();
+      },
+    };
+
+    // Cmd+S / Ctrl+S to save
+    _editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () =>
+      onSaveRef.current()
+    );
 
     // Version check against CubeJS backend
     fetch("/api/v1/version")
@@ -485,7 +675,6 @@ const CodeEditor: FC<CodeEditorProps> = ({
               className={styles.monaco}
               language={language}
               defaultLanguage={language}
-              defaultValue={content?.[active]}
               value={content?.[active]}
               onChange={(val) =>
                 setContent((prev) => ({ ...prev, [active]: val || " " }))
@@ -500,6 +689,17 @@ const CodeEditor: FC<CodeEditorProps> = ({
                 <Console
                   onClose={() => toggleConsole?.()}
                   errors={validationError}
+                  onGoToLine={(line, column) => {
+                    const editor = editorInstanceRef.current;
+                    if (editor) {
+                      editor.revealLineInCenter(line);
+                      editor.setPosition({
+                        lineNumber: line,
+                        column: column || 1,
+                      });
+                      editor.focus();
+                    }
+                  }}
                 />
               </div>
             )}

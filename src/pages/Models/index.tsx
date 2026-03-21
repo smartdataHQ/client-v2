@@ -24,11 +24,13 @@ import { getSourceAndBranch } from "@/pages/Explore";
 import useLocation from "@/hooks/useLocation";
 import useModelsIde from "@/hooks/useModelsIde";
 import useSources from "@/hooks/useSources";
+import useCubeRegistry from "@/hooks/useCubeRegistry";
 import useCheckResponse from "@/hooks/useCheckResponse";
 import { parseProvenance } from "@/utils/provenanceParser";
 import calcChecksum from "@/utils/helpers/dataschemasChecksum";
 import getTables from "@/utils/helpers/getTables";
 import getCurrentBranch from "@/utils/helpers/getCurrentBranch";
+import type { CubeRegistry } from "@/utils/cubejs-language/registry";
 import type { Branch, DataSourceInfo, Schema } from "@/types/dataSource";
 import type { Dataschema } from "@/types/dataschema";
 import type { Version } from "@/types/version";
@@ -99,6 +101,8 @@ interface ModelsProps {
   onVersionsOpen?: () => void;
   onReprofile?: (schema: Dataschema) => void;
   reprofileTarget?: { table: string; schema: string } | null;
+  cubeRegistry?: CubeRegistry;
+  onRefreshRegistry?: () => void;
 }
 
 export const Models: React.FC<ModelsProps> = ({
@@ -141,6 +145,8 @@ export const Models: React.FC<ModelsProps> = ({
   onVersionsOpen,
   onReprofile,
   reprofileTarget,
+  cubeRegistry,
+  onRefreshRegistry,
 }) => {
   const { t } = useTranslation(["pages", "models"]);
   const windowSize = useResponsive();
@@ -274,6 +280,8 @@ export const Models: React.FC<ModelsProps> = ({
                 showConsole={isConsoleOpen}
                 toggleConsole={toggleConsole}
                 validationError={validationError}
+                cubeRegistry={cubeRegistry}
+                onRefreshRegistry={onRefreshRegistry}
               />
             </div>
           </div>
@@ -408,6 +416,7 @@ const ModelsWrapper: React.FC = () => {
   const dataSchemaName = (reservedSlugs.indexOf(slug) === -1 && slug) || null;
 
   const {
+    currentMeta,
     queries: { tablesData, execQueryTables, metaData, execQueryMeta },
     mutations: {
       runQueryMutation,
@@ -436,6 +445,12 @@ const ModelsWrapper: React.FC = () => {
     genSchemaModalVisible,
     smartGenModalVisible,
   ]);
+
+  useEffect(() => {
+    if (curSource?.id) {
+      execQueryTables();
+    }
+  }, [curSource?.id, execQueryTables]);
 
   useCheckResponse(
     tablesData,
@@ -544,6 +559,14 @@ const ModelsWrapper: React.FC = () => {
       setTablesSchema(sourceTablesSchema);
     }
   }, [sourceTablesSchema]);
+
+  const { cubeRegistry, refreshRegistry } = useCubeRegistry(
+    currentMeta,
+    execQueryMeta,
+    curSource?.id,
+    currentBranch?.id,
+    tablesSchema
+  );
 
   // No longer force-redirect to onboarding — the page shows NoDataSource inline instead
 
@@ -914,7 +937,7 @@ const ModelsWrapper: React.FC = () => {
       data={sqlResult}
       validationError={validationError}
       isConsoleOpen={isConsoleOpen}
-      toggleConsole={() => toggleConsole(false)}
+      toggleConsole={() => toggleConsole((prev) => !prev)}
       tablesSchema={tablesSchema}
       schemaFetching={tablesData?.fetching || genSchemaMutation?.fetching}
       onModalClose={() => onModalClose(true)}
@@ -933,6 +956,8 @@ const ModelsWrapper: React.FC = () => {
       }
       onReprofile={isClickHouse ? onReprofile : undefined}
       reprofileTarget={reprofileTarget}
+      cubeRegistry={cubeRegistry}
+      onRefreshRegistry={refreshRegistry}
     />
   );
 };
