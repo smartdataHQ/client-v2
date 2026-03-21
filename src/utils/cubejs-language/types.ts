@@ -102,6 +102,11 @@ export type RegistryStatus =
   | "refreshing"
   | "error";
 
+export interface TableColumnEntry {
+  name: string;
+  type: string;
+}
+
 // ---------------------------------------------------------------------------
 // Parsed Document Types (transient, from parsers)
 // ---------------------------------------------------------------------------

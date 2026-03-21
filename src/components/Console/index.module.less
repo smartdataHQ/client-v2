@@ -3,26 +3,6 @@
   box-shadow: none !important;
 }
 
-.card :global(.ant-card-body) {
-  padding: 6px 28px;
-}
-
-.consoleTabContent {
-  padding: 2px;
-}
-
-.errorText {
-  padding: 8px;
-  padding: 6px;
-  color: #f00;
-  font-size: 12px;
-  font-family: Sora;
-  white-space: pre-wrap;
-  background: rgba(255, 0, 0, 0.05);
-  border: 1px solid rgba(255, 0, 0, 0.1);
-  border-radius: 6px;
-}
-
 .closeButton {
   cursor: pointer;
 }
@@ -57,4 +37,41 @@
   height: 240px;
   padding: 16px 0;
   overflow-y: auto;
+}
+
+.errorItem {
+  padding: 2px 8px !important;
+  font-size: 12px;
+  font-family: monospace;
+  align-items: flex-start !important;
+  gap: 6px;
+}
+
+.errorIcon {
+  color: #ff4d4f;
+  margin-top: 2px;
+}
+
+.warningIcon {
+  color: #faad14;
+  margin-top: 2px;
+}
+
+.clickableLine {
+  cursor: pointer;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.warningCount {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #999;
+}
+
+.noErrors {
+  padding: 12px;
+  color: #999;
+  font-size: 12px;
 }

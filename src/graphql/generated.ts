@@ -76,8 +76,10 @@ export type ExistingModelInfo = {
   file_format: Scalars["String"]["output"];
   file_name: Scalars["String"]["output"];
   has_user_content: Scalars["Boolean"]["output"];
+  has_ai_metrics: Scalars["Boolean"]["output"];
   suggested_merge_strategy: Scalars["String"]["output"];
   supports_reprofile: Scalars["Boolean"]["output"];
+  previous_filters?: Maybe<Scalars["jsonb"]["output"]>;
 };
 
 export type ExportDataModelsOutput = {
@@ -12414,11 +12416,19 @@ export type ProfileTableQuery = {
       file_name: string;
       file_format: string;
       has_user_content: boolean;
+      has_ai_metrics: boolean;
       supports_reprofile: boolean;
       suggested_merge_strategy: string;
+      previous_filters?: any | null;
     } | null;
     raw_profile?: any | null;
   } | null;
+};
+
+export type FilterConditionInput = {
+  column: Scalars["String"]["input"];
+  operator: Scalars["String"]["input"];
+  value?: InputMaybe<Scalars["jsonb"]["input"]>;
 };
 
 export type SmartGenDataSchemasMutationVariables = Exact<{
@@ -12433,6 +12443,19 @@ export type SmartGenDataSchemasMutationVariables = Exact<{
   merge_strategy?: InputMaybe<Scalars["String"]["input"]>;
   profile_data?: InputMaybe<Scalars["jsonb"]["input"]>;
   dry_run?: InputMaybe<Scalars["Boolean"]["input"]>;
+  filters?: InputMaybe<
+    Array<InputMaybe<FilterConditionInput>> | InputMaybe<FilterConditionInput>
+  >;
+  file_name?: InputMaybe<Scalars["String"]["input"]>;
+  cube_name?: InputMaybe<Scalars["String"]["input"]>;
+  selected_ai_metrics?: InputMaybe<
+    | Array<InputMaybe<Scalars["String"]["input"]>>
+    | InputMaybe<Scalars["String"]["input"]>
+  >;
+  selected_columns?: InputMaybe<
+    | Array<InputMaybe<Scalars["String"]["input"]>>
+    | InputMaybe<Scalars["String"]["input"]>
+  >;
 }>;
 
 export type SmartGenDataSchemasMutation = {
@@ -12445,6 +12468,8 @@ export type SmartGenDataSchemasMutation = {
     file_name?: string | null;
     changed: boolean;
     change_preview?: any | null;
+    ai_enrichment?: any | null;
+    previous_filters?: any | null;
   } | null;
 };
 
@@ -13902,8 +13927,10 @@ export const ProfileTableDocument = gql`
         file_name
         file_format
         has_user_content
+        has_ai_metrics
         supports_reprofile
         suggested_merge_strategy
+        previous_filters
       }
       raw_profile
     }
@@ -13929,6 +13956,11 @@ export const SmartGenDataSchemasDocument = gql`
     $merge_strategy: String
     $profile_data: jsonb
     $dry_run: Boolean
+    $filters: [FilterConditionInput]
+    $file_name: String
+    $cube_name: String
+    $selected_ai_metrics: [String]
+    $selected_columns: [String]
   ) {
     smart_gen_dataschemas(
       datasource_id: $datasource_id
@@ -13940,6 +13972,11 @@ export const SmartGenDataSchemasDocument = gql`
       merge_strategy: $merge_strategy
       profile_data: $profile_data
       dry_run: $dry_run
+      filters: $filters
+      file_name: $file_name
+      cube_name: $cube_name
+      selected_ai_metrics: $selected_ai_metrics
+      selected_columns: $selected_columns
     ) {
       code
       message
@@ -13947,6 +13984,9 @@ export const SmartGenDataSchemasDocument = gql`
       file_name
       changed
       change_preview
+      ai_enrichment
+      model_validation
+      previous_filters
     }
   }
 `;

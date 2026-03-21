@@ -134,3 +134,20 @@
   left: 0;
   padding: 0 15px 0 0;
 }
+
+.monacoWrapper {
+  position: relative;
+}
+
+// AI metric decorations injected into Monaco via global classes
+:global {
+  .ai-metric-line-decoration {
+    background: rgba(139, 92, 246, 0.06);
+  }
+
+  .ai-metric-glyph {
+    background: rgba(139, 92, 246, 0.35);
+    border-radius: 2px;
+    margin-left: 3px;
+  }
+}

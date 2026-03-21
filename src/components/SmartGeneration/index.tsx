@@ -10,6 +10,7 @@ import {
   Spin,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
 import { RightOutlined } from "@ant-design/icons";
@@ -18,10 +19,16 @@ import { useTranslation } from "react-i18next";
 import Button from "@/components/Button";
 import AuthTokensStore from "@/stores/AuthTokensStore";
 import type { DataSourceInfo, Schema } from "@/types/dataSource";
-import { useSmartGenDataSchemasMutation } from "@/graphql/generated";
+import {
+  useSmartGenDataSchemasMutation,
+  useFetchMetaQuery,
+} from "@/graphql/generated";
+
+import FilterBuilder from "./FilterBuilder";
 
 import styles from "./index.module.less";
 
+import type { FilterCondition, DimensionMap } from "./FilterBuilder";
 import type { FC } from "react";
 
 const { Title, Text } = Typography;
@@ -162,6 +169,14 @@ interface ChangeBlock {
   cube: string;
 }
 
+interface AIMetricEntry {
+  name: string;
+  type: string;
+  member_type: string;
+  cube: string;
+  ai_generation_context: string | null;
+}
+
 interface ChangePreview {
   fields_added: ChangeField[];
   fields_updated: ChangeField[];
@@ -169,6 +184,9 @@ interface ChangePreview {
   fields_preserved: ChangeField[];
   blocks_preserved: ChangeBlock[];
   summary: string;
+  ai_metrics_added?: AIMetricEntry[];
+  ai_metrics_retained?: AIMetricEntry[];
+  ai_metrics_removed?: AIMetricEntry[];
 }
 
 /** Render the change preview as categorized tables. */
@@ -220,13 +238,27 @@ const ChangePreviewPanel: FC<{ preview: ChangePreview }> = ({ preview }) => {
     { title: "Cube", dataIndex: "cube", key: "cube" },
   ];
 
+  const aiAdded = preview.ai_metrics_added ?? [];
+  const aiRetained = preview.ai_metrics_retained ?? [];
+  const aiRemoved = preview.ai_metrics_removed ?? [];
+  const hasAIMetrics =
+    aiAdded.length > 0 || aiRetained.length > 0 || aiRemoved.length > 0;
+
+  // Filter out ai_generated fields from the preserved table — they're shown in the AI section
+  const nonAIPreserved = preview.fields_preserved.filter(
+    (f) => f.reason !== "ai_generated"
+  );
+
   const hasChanges =
     preview.fields_added.length > 0 ||
     preview.fields_updated.length > 0 ||
     preview.fields_removed.length > 0;
 
   return (
-    <div className={styles.changePreview}>
+    <div
+      className={styles.changePreview}
+      style={{ maxHeight: 400, overflowY: "auto" }}
+    >
       <Title level={5}>Change Preview</Title>
       <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
         {preview.summary}
@@ -286,20 +318,18 @@ const ChangePreviewPanel: FC<{ preview: ChangePreview }> = ({ preview }) => {
         </div>
       )}
 
-      {preview.fields_preserved.length > 0 && (
+      {nonAIPreserved.length > 0 && (
         <div className={styles.changeSection}>
           <div className={styles.changeSectionHeader}>
-            <Tag color="default">{preview.fields_preserved.length}</Tag>
+            <Tag color="default">{nonAIPreserved.length}</Tag>
             <Text strong>User fields preserved</Text>
           </div>
           <Table
             size="small"
-            dataSource={preview.fields_preserved}
+            dataSource={nonAIPreserved}
             columns={preservedColumns}
             rowKey={(r) => `${r.cube}.${r.name}`}
-            pagination={
-              preview.fields_preserved.length > 10 ? { pageSize: 10 } : false
-            }
+            pagination={nonAIPreserved.length > 10 ? { pageSize: 10 } : false}
           />
         </div>
       )}
@@ -319,8 +349,80 @@ const ChangePreviewPanel: FC<{ preview: ChangePreview }> = ({ preview }) => {
         </div>
       )}
 
+      {hasAIMetrics && (
+        <div className={styles.changeSection}>
+          <div className={styles.changeSectionHeader}>
+            <Text strong>AI-Generated Metrics</Text>
+          </div>
+
+          {aiAdded.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>
+                Added
+              </Text>
+              <Space size={4} wrap>
+                {aiAdded.map((m) => (
+                  <Tooltip
+                    key={`${m.cube}.${m.name}`}
+                    title={m.ai_generation_context || undefined}
+                  >
+                    <Tag color="success">
+                      {m.cube}.{m.name}{" "}
+                      <span style={{ opacity: 0.6 }}>({m.member_type})</span>
+                    </Tag>
+                  </Tooltip>
+                ))}
+              </Space>
+            </div>
+          )}
+
+          {aiRetained.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>
+                Retained
+              </Text>
+              <Space size={4} wrap>
+                {aiRetained.map((m) => (
+                  <Tooltip
+                    key={`${m.cube}.${m.name}`}
+                    title={m.ai_generation_context || undefined}
+                  >
+                    <Tag color="default">
+                      {m.cube}.{m.name}{" "}
+                      <span style={{ opacity: 0.6 }}>({m.member_type})</span>
+                    </Tag>
+                  </Tooltip>
+                ))}
+              </Space>
+            </div>
+          )}
+
+          {aiRemoved.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>
+                Removed
+              </Text>
+              <Space size={4} wrap>
+                {aiRemoved.map((m) => (
+                  <Tooltip
+                    key={`${m.cube}.${m.name}`}
+                    title={m.ai_generation_context || undefined}
+                  >
+                    <Tag color="error">
+                      {m.cube}.{m.name}{" "}
+                      <span style={{ opacity: 0.6 }}>({m.member_type})</span>
+                    </Tag>
+                  </Tooltip>
+                ))}
+              </Space>
+            </div>
+          )}
+        </div>
+      )}
+
       {!hasChanges &&
-        preview.fields_preserved.length === 0 &&
+        !hasAIMetrics &&
+        nonAIPreserved.length === 0 &&
         preview.blocks_preserved.length === 0 && (
           <Alert message="No changes detected" type="info" showIcon />
         )}
@@ -509,13 +611,16 @@ function getColumnInfo(col: any): { text?: string; tags?: string[] } {
 type ColumnFilter = "all" | "active" | "empty";
 
 /** Infinite-scroll column list with activity indicators and inline stats. */
-const ColumnList: FC<{ columns: any[]; rowCount: number }> = ({
-  columns,
-  rowCount,
-}) => {
+const ColumnList: FC<{
+  columns: any[];
+  rowCount: number;
+  selectedColumns?: Set<string>;
+  onSelectionChange?: (selected: Set<string>) => void;
+}> = ({ columns, rowCount, selectedColumns, onSelectionChange }) => {
   const [expandedCol, setExpandedCol] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ColumnFilter>("all");
+  const selectable = !!onSelectionChange;
 
   const activeCount = useMemo(
     () =>
@@ -579,6 +684,36 @@ const ColumnList: FC<{ columns: any[]; rowCount: number }> = ({
       </div>
       <div className={styles.columnScroll}>
         <div className={styles.columnItemHeader}>
+          {selectable && (
+            <Checkbox
+              checked={
+                selectedColumns != null &&
+                filtered
+                  .filter((c) => c.has_values !== false && c.value_rows > 0)
+                  .every((c) => selectedColumns.has(c.name))
+              }
+              indeterminate={
+                selectedColumns != null &&
+                filtered.some((c) => selectedColumns.has(c.name)) &&
+                !filtered
+                  .filter((c) => c.has_values !== false && c.value_rows > 0)
+                  .every((c) => selectedColumns.has(c.name))
+              }
+              onChange={(e) => {
+                if (!onSelectionChange || !selectedColumns) return;
+                const next = new Set(selectedColumns);
+                const activeFiltered = filtered.filter(
+                  (c) => c.has_values !== false && c.value_rows > 0
+                );
+                if (e.target.checked) {
+                  activeFiltered.forEach((c) => next.add(c.name));
+                } else {
+                  activeFiltered.forEach((c) => next.delete(c.name));
+                }
+                onSelectionChange(next);
+              }}
+            />
+          )}
           <span />
           <span />
           <span>Name</span>
@@ -606,6 +741,23 @@ const ColumnList: FC<{ columns: any[]; rowCount: number }> = ({
                 } ${!isActive ? styles.columnItemInactive : ""}`}
                 onClick={() => setExpandedCol(isOpen ? null : col.name)}
               >
+                {selectable && (
+                  <Checkbox
+                    checked={selectedColumns?.has(col.name) ?? false}
+                    disabled={!isActive}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      if (!onSelectionChange || !selectedColumns) return;
+                      const next = new Set(selectedColumns);
+                      if (e.target.checked) {
+                        next.add(col.name);
+                      } else {
+                        next.delete(col.name);
+                      }
+                      onSelectionChange(next);
+                    }}
+                  />
+                )}
                 <RightOutlined
                   className={`${styles.columnChevron} ${
                     isOpen ? styles.columnChevronOpen : ""
@@ -699,6 +851,8 @@ interface SmartGenerationProps {
   initialSchema?: string;
   /** Pre-selected table name (e.g. "semantic_events") from model provenance — skips table selection */
   initialTable?: string;
+  /** Filters from previous generation (pre-populated on reprofile) */
+  previousFilters?: FilterCondition[];
 }
 
 const SmartGeneration: FC<SmartGenerationProps> = ({
@@ -709,11 +863,13 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   onCancel,
   initialSchema,
   initialTable,
+  previousFilters,
 }) => {
   const { t } = useTranslation(["models", "common"]);
   const hasInitial = !!(initialSchema && initialTable);
-  const [step, setStep] = useState<SmartGenStep>(
-    hasInitial ? "profiling" : "select"
+  const [step, setStep] = useState<SmartGenStep>("select");
+  const [filters, setFilters] = useState<FilterCondition[]>(
+    previousFilters || []
   );
   const [selectedSchema, setSelectedSchema] = useState<string>(
     initialSchema || ""
@@ -722,6 +878,8 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     initialTable || ""
   );
   const [mergeStrategy, setMergeStrategy] = useState<string>("auto");
+  const [fileNameOverride, setFileNameOverride] = useState<string>("");
+  const [cubeNameOverride, setCubeNameOverride] = useState<string>("");
   const [arrayJoinSelections, setArrayJoinSelections] = useState<
     ArrayJoinSelection[]
   >([]);
@@ -730,12 +888,112 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   const [changePreview, setChangePreview] = useState<ChangePreview | null>(
     null
   );
+  const [suggestedAIMetrics, setSuggestedAIMetrics] = useState<any[]>([]);
+  const [selectedAIMetricNames, setSelectedAIMetricNames] = useState<
+    Set<string>
+  >(new Set());
+  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(
+    new Set()
+  );
 
   const [profileData, setProfileData] = useState<any>(null);
   const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
   const [smartGenResult, execSmartGen] = useSmartGenDataSchemasMutation();
+
+  // Fetch Cube.js meta — same query the Explore page uses.
+  // pause=false when both datasource + branch are available (mirrors Explore page pattern).
+  const [metaResult, execMetaQuery] = useFetchMetaQuery({
+    variables: { datasource_id: dataSource.id!, branch_id: branchId },
+    pause: !dataSource.id || !branchId,
+  });
+
+  // Re-fetch meta when datasource or branch changes
+  useEffect(() => {
+    if (dataSource.id && branchId) {
+      execMetaQuery();
+    }
+  }, [dataSource.id, branchId, execMetaQuery]);
+
+  // Build dimension map: raw ClickHouse column name → fully-qualified Cube.js
+  // dimension member (e.g. "event" → "semantic_events.event").
+  //
+  // Three matching strategies, in priority order:
+  //  1. dim.meta.source_column === rawColumn  (direct, set by our cubeBuilder)
+  //  2. dim short name === rawColumn          (exact, works for simple columns)
+  //  3. dim short name === sanitized(rawColumn) (handles special chars)
+  const dimensionMap = useMemo<DimensionMap | undefined>(() => {
+    const cubes = metaResult.data?.fetch_meta?.cubes as any[] | undefined;
+    if (!cubes || cubes.length === 0) return undefined;
+
+    // Collect ALL dimensions across all cubes, indexed by short name and source_column
+    const bySourceCol: Record<string, string> = {};
+    const byShortName: Record<string, string> = {};
+
+    for (const cube of cubes) {
+      for (const dim of cube.dimensions || []) {
+        if (!dim.name) continue;
+        const fullName: string = dim.name; // "cubeName.dimName"
+
+        // Strategy 1: meta.source_column
+        const sc = dim.meta?.source_column;
+        if (sc && typeof sc === "string") {
+          bySourceCol[sc] = fullName;
+        }
+
+        // Index by short name for strategies 2 & 3
+        const dot = fullName.lastIndexOf(".");
+        const shortName = dot >= 0 ? fullName.slice(dot + 1) : fullName;
+        byShortName[shortName] = fullName;
+      }
+    }
+
+    // Now map each raw column from the table schema
+    const tableColumns = schema?.[selectedSchema]?.[selectedTable] || [];
+    if (tableColumns.length === 0) return undefined;
+
+    const map: DimensionMap = {};
+    for (const col of tableColumns) {
+      const raw = col.name;
+
+      // Strategy 1: exact source_column match
+      if (bySourceCol[raw]) {
+        map[raw] = bySourceCol[raw];
+        continue;
+      }
+
+      // Strategy 2: exact short-name match
+      if (byShortName[raw]) {
+        map[raw] = byShortName[raw];
+        continue;
+      }
+
+      // Strategy 3: sanitized match
+      let sanitized = raw.replace(/[^a-zA-Z0-9_]/g, "_");
+      if (/^\d/.test(sanitized)) sanitized = `field_${sanitized}`;
+      sanitized = sanitized.replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+      if (sanitized && byShortName[sanitized]) {
+        map[raw] = byShortName[sanitized];
+      }
+    }
+
+    if (Object.keys(map).length > 0) {
+      console.debug("[FilterBuilder] dimensionMap built:", map);
+      return map;
+    }
+    console.debug(
+      "[FilterBuilder] no dimension map — meta cubes:",
+      cubes?.length,
+      "tableColumns:",
+      tableColumns.length,
+      "byShortName keys:",
+      Object.keys(byShortName).slice(0, 5),
+      "bySourceCol keys:",
+      Object.keys(bySourceCol).slice(0, 5)
+    );
+    return undefined;
+  }, [metaResult.data, selectedSchema, selectedTable, schema]);
 
   /** Profile a table via direct SSE to CubeJS — bypasses Hasura for real-time progress. */
   const startProfile = useCallback(
@@ -769,6 +1027,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
           table: tblName,
           schema: tblSchema,
           branchId,
+          ...(filters.length > 0 ? { filters } : {}),
         }),
         signal: controller.signal,
       })
@@ -815,6 +1074,15 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
                   }))
                 );
               }
+              // Select all active columns by default
+              if (pd.columns?.length) {
+                const active = pd.columns
+                  .filter(
+                    (c: any) => c.has_values !== false && c.value_rows > 0
+                  )
+                  .map((c: any) => c.name);
+                setSelectedColumns(new Set(active));
+              }
               setStep("preview");
             } else if (eventType === "error") {
               setError(data.error || "Profiling failed");
@@ -859,13 +1127,17 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
           setStep("select");
         });
     },
-    [dataSource.id, branchId]
+    [dataSource.id, branchId, filters]
   );
 
-  // Auto-start profiling when pre-selected table is provided (reprofile flow)
+  // On reprofile flow: pre-populate filters and stay on select step for user review
   useEffect(() => {
     if (hasInitial && selectedTable && selectedSchema) {
-      startProfile(selectedSchema, selectedTable);
+      // Pre-populate filters from previous generation if available
+      if (previousFilters && previousFilters.length > 0) {
+        setFilters(previousFilters);
+      }
+      // Stay on "select" step so user can review/edit filters before profiling
     }
     return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -892,6 +1164,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     const [schemaName, tableName] = value.split("::");
     setSelectedSchema(schemaName);
     setSelectedTable(tableName);
+    setFilters([]);
     setError(null);
   }, []);
 
@@ -909,6 +1182,13 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       .filter((a) => a.selected)
       .map((a) => ({ column: a.column, alias: a.alias }));
 
+    // Only pass selected_columns if user deselected some columns
+    const activeCount =
+      profileData?.columns?.filter(
+        (c: any) => c.has_values !== false && c.value_rows > 0
+      ).length ?? 0;
+    const isSubset = selectedColumns.size < activeCount;
+
     const result = await execSmartGen({
       datasource_id: dataSource.id!,
       branch_id: branchId,
@@ -920,6 +1200,10 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
         : undefined,
       profile_data: rawProfile || undefined,
       dry_run: true,
+      filters: filters.length > 0 ? filters : undefined,
+      file_name: fileNameOverride || undefined,
+      cube_name: cubeNameOverride || undefined,
+      selected_columns: isSubset ? [...selectedColumns] : undefined,
     });
 
     if (result.error) {
@@ -928,10 +1212,18 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       return;
     }
 
-    const preview = result.data?.smart_gen_dataschemas?.change_preview;
+    const genData = result.data?.smart_gen_dataschemas;
+    const preview = genData?.change_preview;
     if (preview) {
       setChangePreview(preview as ChangePreview);
     }
+
+    // Capture AI metric suggestions from the LLM (if any)
+    const aiSuggestions = genData?.ai_enrichment?.suggested_metrics || [];
+    setSuggestedAIMetrics(aiSuggestions);
+    // All selected by default
+    setSelectedAIMetricNames(new Set(aiSuggestions.map((m: any) => m.name)));
+
     setStep("change_preview");
   }, [
     dataSource.id,
@@ -941,6 +1233,9 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     mergeStrategy,
     arrayJoinSelections,
     rawProfile,
+    filters,
+    selectedColumns,
+    profileData,
     execSmartGen,
   ]);
 
@@ -953,6 +1248,13 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       .filter((a) => a.selected)
       .map((a) => ({ column: a.column, alias: a.alias }));
 
+    // Only pass selected_columns if user deselected some columns
+    const applyActiveCount =
+      profileData?.columns?.filter(
+        (c: any) => c.has_values !== false && c.value_rows > 0
+      ).length ?? 0;
+    const applyIsSubset = selectedColumns.size < applyActiveCount;
+
     const result = await execSmartGen({
       datasource_id: dataSource.id!,
       branch_id: branchId,
@@ -964,7 +1266,13 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
         : undefined,
       profile_data: rawProfile || undefined,
       dry_run: false,
-    });
+      filters: filters.length > 0 ? filters : undefined,
+      file_name: fileNameOverride || undefined,
+      cube_name: cubeNameOverride || undefined,
+      selected_ai_metrics:
+        selectedAIMetricNames.size > 0 ? [...selectedAIMetricNames] : undefined,
+      selected_columns: applyIsSubset ? [...selectedColumns] : undefined,
+    } as any);
 
     if (result.error) {
       setError(result.error.message);
@@ -981,6 +1289,10 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     mergeStrategy,
     arrayJoinSelections,
     rawProfile,
+    filters,
+    selectedAIMetricNames,
+    selectedColumns,
+    profileData,
     execSmartGen,
   ]);
 
@@ -1033,6 +1345,43 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
             />
           </div>
 
+          {selectedTable && selectedSchema && schema && (
+            <div style={{ marginTop: 16 }}>
+              <Title level={5}>Filters (optional)</Title>
+              <Text
+                type="secondary"
+                style={{ display: "block", marginBottom: 8 }}
+              >
+                Add filters to profile a data subset instead of the entire
+                table.
+              </Text>
+              <FilterBuilder
+                schema={(() => {
+                  const tableColumns =
+                    schema?.[selectedSchema]?.[selectedTable] || [];
+                  return tableColumns.map((col) => ({
+                    name: col.name,
+                    raw_type: col.type,
+                    value_type: /int|float|decimal|double/i.test(col.type)
+                      ? "NUMBER"
+                      : /date|datetime/i.test(col.type)
+                      ? "DATE"
+                      : /bool/i.test(col.type)
+                      ? "BOOLEAN"
+                      : "STRING",
+                  }));
+                })()}
+                filters={filters}
+                onChange={setFilters}
+                dimensionMap={dimensionMap}
+                tableName={selectedTable}
+                tableSchema={selectedSchema}
+                datasourceId={dataSource.id!}
+                branchId={branchId}
+              />
+            </div>
+          )}
+
           {error && (
             <Alert
               className={styles.errorMessage}
@@ -1076,10 +1425,23 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
           />
 
           {profileData.columns && profileData.columns.length > 0 && (
-            <ColumnList
-              columns={profileData.columns.filter(Boolean) as any[]}
-              rowCount={profileData.row_count ?? 0}
-            />
+            <>
+              <div style={{ marginBottom: 4, fontSize: 12, color: "#888" }}>
+                {selectedColumns.size} of{" "}
+                {
+                  profileData.columns.filter(
+                    (c: any) => c.has_values !== false && c.value_rows > 0
+                  ).length
+                }{" "}
+                active columns selected for model
+              </div>
+              <ColumnList
+                columns={profileData.columns.filter(Boolean) as any[]}
+                rowCount={profileData.row_count ?? 0}
+                selectedColumns={selectedColumns}
+                onSelectionChange={setSelectedColumns}
+              />
+            </>
           )}
 
           {arrayJoinSelections.length > 0 && (
@@ -1162,6 +1524,52 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
             </div>
           )}
 
+          <div style={{ margin: "16px 0" }}>
+            <Title level={5}>Output Names</Title>
+            <Space size={16}>
+              <div>
+                <Text
+                  type="secondary"
+                  style={{ display: "block", marginBottom: 4, fontSize: 12 }}
+                >
+                  File name
+                </Text>
+                <AntInput
+                  size="small"
+                  style={{ width: 220 }}
+                  placeholder={`${selectedTable}.js`}
+                  value={fileNameOverride}
+                  onChange={(e) => setFileNameOverride(e.target.value)}
+                  suffix=".js"
+                  allowClear
+                />
+              </div>
+              <div>
+                <Text
+                  type="secondary"
+                  style={{ display: "block", marginBottom: 4, fontSize: 12 }}
+                >
+                  Model name
+                </Text>
+                <AntInput
+                  size="small"
+                  style={{ width: 220 }}
+                  placeholder={
+                    selectedTable
+                      ? selectedTable
+                          .replace(/[^a-zA-Z0-9]/g, "_")
+                          .replace(/_+/g, "_")
+                          .replace(/^_+|_+$/g, "")
+                      : "cube_name"
+                  }
+                  value={cubeNameOverride}
+                  onChange={(e) => setCubeNameOverride(e.target.value)}
+                  allowClear
+                />
+              </div>
+            </Space>
+          </div>
+
           {error && (
             <Alert
               className={styles.errorMessage}
@@ -1205,6 +1613,116 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
         <>
           {changePreview && <ChangePreviewPanel preview={changePreview} />}
 
+          {/* AI Metric Suggestions — selectable checklist */}
+          {suggestedAIMetrics.length > 0 && (
+            <div style={{ margin: "16px 0" }}>
+              <Title level={5}>
+                AI-Generated Metrics ({selectedAIMetricNames.size}/
+                {suggestedAIMetrics.length} selected)
+              </Title>
+              <Text
+                type="secondary"
+                style={{ display: "block", marginBottom: 8 }}
+              >
+                The LLM suggested the following calculated metrics. Uncheck any
+                you don&apos;t want included in the model.
+              </Text>
+              <Space
+                direction="vertical"
+                style={{ width: "100%", maxHeight: 350, overflowY: "auto" }}
+                size={4}
+              >
+                {suggestedAIMetrics.map((metric: any) => (
+                  <div
+                    key={metric.name}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 8,
+                      padding: "8px 12px",
+                      background: selectedAIMetricNames.has(metric.name)
+                        ? "#f6ffed"
+                        : "#fafafa",
+                      border: `1px solid ${
+                        selectedAIMetricNames.has(metric.name)
+                          ? "#b7eb8f"
+                          : "#f0f0f0"
+                      }`,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Checkbox
+                      checked={selectedAIMetricNames.has(metric.name)}
+                      onChange={(e) => {
+                        setSelectedAIMetricNames((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) {
+                            next.add(metric.name);
+                          } else {
+                            next.delete(metric.name);
+                          }
+                          return next;
+                        });
+                      }}
+                      style={{ marginTop: 2 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <Text strong>{metric.name}</Text>
+                        <Tag
+                          color={
+                            metric.fieldType === "measure" ? "blue" : "green"
+                          }
+                        >
+                          {metric.fieldType}
+                        </Tag>
+                        <Tag>{metric.type}</Tag>
+                      </div>
+                      {metric.description && (
+                        <Text
+                          type="secondary"
+                          style={{ fontSize: 12, display: "block" }}
+                        >
+                          {metric.description}
+                        </Text>
+                      )}
+                      {metric.ai_generation_context && (
+                        <Text
+                          type="secondary"
+                          style={{
+                            fontSize: 11,
+                            display: "block",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          {metric.ai_generation_context}
+                        </Text>
+                      )}
+                      {metric.sql && (
+                        <Text
+                          code
+                          style={{
+                            fontSize: 11,
+                            display: "block",
+                            marginTop: 4,
+                          }}
+                        >
+                          {metric.sql}
+                        </Text>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </Space>
+            </div>
+          )}
+
           {error && (
             <Alert
               className={styles.errorMessage}
@@ -1224,14 +1742,15 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
             >
               {t("common:words.back")}
             </Button>
-            {changePreview &&
+            {(changePreview &&
               (changePreview.fields_added.length > 0 ||
                 changePreview.fields_updated.length > 0 ||
-                changePreview.fields_removed.length > 0) && (
-                <Button type="primary" size="large" onClick={handleApply}>
-                  Apply Changes
-                </Button>
-              )}
+                changePreview.fields_removed.length > 0)) ||
+            suggestedAIMetrics.length > 0 ? (
+              <Button type="primary" size="large" onClick={handleApply}>
+                Apply Changes
+              </Button>
+            ) : null}
           </div>
         </>
       )}

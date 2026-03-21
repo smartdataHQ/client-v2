@@ -4,7 +4,12 @@
  * to suggest cross-cube references.
  */
 
-import type { CubeRegistryEntry, MemberEntry, RegistryStatus } from "./types";
+import type {
+  CubeRegistryEntry,
+  MemberEntry,
+  RegistryStatus,
+  TableColumnEntry,
+} from "./types";
 
 // ---------------------------------------------------------------------------
 // FetchMeta response shape (from Hasura fetch_meta action)
@@ -115,5 +120,34 @@ export class CubeRegistry {
   /** Return all registry entries. */
   getAllEntries(): CubeRegistryEntry[] {
     return this.entries;
+  }
+
+  // --- Table column storage ---
+  private tableColumns: Map<string, TableColumnEntry[]> = new Map();
+
+  populateTableColumns(
+    tablesSchema: Record<
+      string,
+      Record<string, Array<{ name: string; type?: string }>>
+    >
+  ): void {
+    this.tableColumns.clear();
+    for (const [schemaName, tables] of Object.entries(tablesSchema)) {
+      for (const [tableName, columns] of Object.entries(tables)) {
+        const key = `${schemaName}.${tableName}`;
+        this.tableColumns.set(
+          key,
+          columns.map((c) => ({ name: c.name, type: c.type || "String" }))
+        );
+      }
+    }
+  }
+
+  getTableColumns(key: string): TableColumnEntry[] {
+    return this.tableColumns.get(key) ?? [];
+  }
+
+  getAllTableKeys(): string[] {
+    return Array.from(this.tableColumns.keys());
   }
 }
