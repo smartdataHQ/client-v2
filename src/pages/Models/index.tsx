@@ -205,6 +205,15 @@ export const Models: React.FC<ModelsProps> = ({
   const Layout =
     dataSources && dataSources.length === 0 ? AppLayout : SidebarLayout;
 
+  const smartGenQueryTarget = useMemo(() => {
+    if (!smartGenModalVisible || typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    const schema = params.get("schema");
+    const table = params.get("table");
+    if (!schema || !table) return null;
+    return { schema, table };
+  }, [smartGenModalVisible]);
+
   return (
     <Layout
       icon={<ModelsActiveIcon />}
@@ -314,8 +323,16 @@ export const Models: React.FC<ModelsProps> = ({
                   branchId={currentBranch?.id || ""}
                   onComplete={onSmartGenComplete}
                   onCancel={onModalClose}
-                  initialTable={reprofileTarget?.table ?? undefined}
-                  initialSchema={reprofileTarget?.schema ?? undefined}
+                  initialTable={
+                    reprofileTarget?.table ??
+                    smartGenQueryTarget?.table ??
+                    undefined
+                  }
+                  initialSchema={
+                    reprofileTarget?.schema ??
+                    smartGenQueryTarget?.schema ??
+                    undefined
+                  }
                 />
               </Modal>
             </>
@@ -668,6 +685,20 @@ const ModelsWrapper: React.FC = () => {
     }
 
     await execCreateVersionMutation({ object: versionData });
+    // Invalidate CubeJS per-user caches so Explore reflects deleted/updated models immediately.
+    try {
+      await fetch("/api/v1/internal/invalidate-cache", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "user",
+          userId: currentUser?.id,
+        }),
+      });
+    } catch {
+      // Non-fatal: metadata refresh below still runs.
+    }
+    execQueryMeta({ id: curSource?.id, branch_id: currentBranch?.id });
     execVersionAll();
   };
 

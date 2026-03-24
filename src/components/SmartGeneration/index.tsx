@@ -1130,17 +1130,29 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     [dataSource.id, branchId, filters]
   );
 
-  // On reprofile flow: pre-populate filters and stay on select step for user review
+  // Sync late-arriving initial selection (e.g. after page refresh).
+  // Initial table/schema can be resolved by parent after this component mounts.
   useEffect(() => {
-    if (hasInitial && selectedTable && selectedSchema) {
-      // Pre-populate filters from previous generation if available
+    const tableExistsInSchema =
+      !!initialSchema &&
+      !!initialTable &&
+      !!schema?.[initialSchema]?.[initialTable];
+
+    if (tableExistsInSchema) {
+      setSelectedSchema(initialSchema);
+      setSelectedTable(initialTable);
+      setStep("select");
+      setError(null);
+
+      // Pre-populate filters from previous generation when reprofiling.
       if (previousFilters && previousFilters.length > 0) {
         setFilters(previousFilters);
       }
-      // Stay on "select" step so user can review/edit filters before profiling
     }
+  }, [initialSchema, initialTable, previousFilters, schema]);
+
+  useEffect(() => {
     return () => abortRef.current?.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tableOptions = useMemo(() => {
@@ -1159,6 +1171,16 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     }
     return options;
   }, [schema]);
+
+  const isTableOptionsLoading = !schema || tableOptions.length === 0;
+
+  const selectedTableValue = useMemo(() => {
+    if (!selectedSchema || !selectedTable) return undefined;
+    const value = `${selectedSchema}::${selectedTable}`;
+    return tableOptions.some((option) => option.value === value)
+      ? value
+      : undefined;
+  }, [selectedSchema, selectedTable, tableOptions]);
 
   const handleTableSelect = useCallback((value: string) => {
     const [schemaName, tableName] = value.split("::");
@@ -1329,11 +1351,9 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
               placeholder="Search for a table..."
               style={{ width: "100%" }}
               size="large"
-              value={
-                selectedTable
-                  ? `${selectedSchema}::${selectedTable}`
-                  : undefined
-              }
+              disabled={isTableOptionsLoading}
+              loading={isTableOptionsLoading}
+              value={selectedTableValue}
               onChange={handleTableSelect}
               filterOption={(input, option) =>
                 (option?.label ?? "")
