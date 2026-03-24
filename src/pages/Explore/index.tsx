@@ -220,6 +220,7 @@ const ExploreWrapper = () => {
       branch_id: currentBranch?.id,
     },
     pause: true,
+    requestPolicy: "cache-and-network",
   });
 
   useCheckResponse(
@@ -303,7 +304,8 @@ const ExploreWrapper = () => {
 
   useTrackedEffect(() => {
     if (curSource?.id && currentBranch?.id) {
-      execMetaQuery();
+      // Force fresh cube metadata so newly generated models appear immediately.
+      execMetaQuery({ requestPolicy: "network-only" });
       doReset(initialState);
       delete currentExploration.data;
     }

@@ -72,14 +72,18 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
   const SMART_GEN_TABLES = ["semantic_events", "data_points", "entities"];
 
   const onSmartGenerate = useCallback(
-    (_schemaName: string, _tableName: string) => {
+    (schemaName: string, tableName: string) => {
       if (!editId || !teamData?.dataSources) return;
       const ds = teamData.dataSources.find((d) => d.id === editId);
       const activeBranch = ds?.branches?.find(
         (b) => b.status === Branch_Statuses_Enum.Active
       );
       if (!activeBranch) return;
-      setLocation(`${MODELS}/${editId}/${activeBranch.id}/smartgen`);
+      const schemaParam = encodeURIComponent(schemaName);
+      const tableParam = encodeURIComponent(tableName);
+      setLocation(
+        `${MODELS}/${editId}/${activeBranch.id}/smartgen?schema=${schemaParam}&table=${tableParam}`
+      );
     },
     [editId, teamData, setLocation]
   );

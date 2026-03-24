@@ -121,6 +121,68 @@ function getOperatorsForType(valueType: string): OperatorDef[] {
   return ALL_OPERATORS.filter((op) => allowed.includes(op.value));
 }
 
+function normalizeText(value: unknown): string {
+  if (value == null) return "";
+  return String(value).toLowerCase().trim();
+}
+
+function findOrderedTokenStart(text: string, tokens: string[]): number {
+  let cursor = 0;
+  let firstStart = -1;
+  for (const token of tokens) {
+    const idx = text.indexOf(token, cursor);
+    if (idx < 0) return -1;
+    if (firstStart < 0) firstStart = idx;
+    cursor = idx + token.length;
+  }
+  return firstStart;
+}
+
+function classifyColumnMatch(
+  query: string,
+  option: { label?: unknown; value?: unknown }
+): { matched: boolean; tier: number; index: number } {
+  const value = normalizeText(option?.value);
+  const label = normalizeText(option?.label);
+  const text = value || label;
+  if (!query) return { matched: true, tier: 9, index: 0 };
+  if (!text)
+    return { matched: false, tier: 99, index: Number.MAX_SAFE_INTEGER };
+
+  // Tier 0: exact match
+  if (text === query || label === query) {
+    return { matched: true, tier: 0, index: 0 };
+  }
+
+  // Tier 1: left-most prefix match
+  if (text.startsWith(query)) {
+    return { matched: true, tier: 1, index: 0 };
+  }
+
+  // Tier 2/3: ordered token match from left to right
+  const queryTokens = query.split(/\s+/).filter(Boolean);
+  const orderedIdx = findOrderedTokenStart(text, queryTokens);
+  if (orderedIdx >= 0) {
+    const atBoundary =
+      orderedIdx === 0 || /[._\-\s]/.test(text[orderedIdx - 1] || "");
+    return { matched: true, tier: atBoundary ? 2 : 3, index: orderedIdx };
+  }
+
+  return { matched: false, tier: 99, index: Number.MAX_SAFE_INTEGER };
+}
+
+function isKeyValueColumn(columnName: string): boolean {
+  const name = normalizeText(columnName);
+  return (
+    name.includes(".key") ||
+    name.includes(".value") ||
+    name.endsWith("_key") ||
+    name.endsWith("_value") ||
+    name.includes("key.") ||
+    name.includes("value.")
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Cube.js load API — same pipeline as Explore page
 // ---------------------------------------------------------------------------
@@ -364,26 +426,27 @@ function useColumnValues(
   const doFetch = useCallback(
     (searchTerm: string, signal: AbortSignal) => {
       const a = argsRef.current;
-      if (a.dimensionMember && a.dimensionMap && a.datasourceId) {
-        // Cube.js load path (model exists)
-        const cubeFilters = buildCubeFilters(a.siblingFilters, a.dimensionMap);
-        return loadCubeValues(
-          a.dimensionMember,
-          searchTerm,
-          cubeFilters,
-          a.datasourceId,
-          a.branchId,
-          signal
-        );
-      }
       if (a.tableName && a.tableSchema && a.column && a.datasourceId) {
-        // Direct query path (no model — partition filter from securityContext)
+        // Prefer direct table query so value options are always sourced
+        // from the currently selected table/schema in Smart Generate.
         return loadDirectValues(
           a.tableName,
           a.tableSchema,
           a.column,
           searchTerm,
           a.siblingFilters,
+          a.datasourceId,
+          a.branchId,
+          signal
+        );
+      }
+      if (a.dimensionMember && a.dimensionMap && a.datasourceId) {
+        // Fallback path when table context is unavailable
+        const cubeFilters = buildCubeFilters(a.siblingFilters, a.dimensionMap);
+        return loadCubeValues(
+          a.dimensionMember,
+          searchTerm,
+          cubeFilters,
           a.datasourceId,
           a.branchId,
           signal
@@ -640,6 +703,7 @@ const FilterRow: FC<{
 }) => {
   const vt = getValueType(schema, filter.column);
   const operators = getOperatorsForType(vt);
+  const [columnSearch, setColumnSearch] = useState("");
 
   const dimensionMember = dimensionMap?.[filter.column];
 
@@ -654,22 +718,47 @@ const FilterRow: FC<{
     branchId
   );
 
+  const filteredColumnOptions = useMemo(() => {
+    const query = normalizeText(columnSearch);
+    if (!query) return columnOptions;
+
+    return columnOptions
+      .map((option, originalIndex) => {
+        const match = classifyColumnMatch(query, option);
+        return { option, originalIndex, ...match };
+      })
+      .filter((entry) => entry.matched)
+      .sort((a, b) => {
+        // New search behavior: strict left-to-right ordering.
+        if (a.tier !== b.tier) return a.tier - b.tier;
+        if (a.index !== b.index) return a.index - b.index;
+        if (a.originalIndex !== b.originalIndex) {
+          return a.originalIndex - b.originalIndex;
+        }
+        return a.option.value.localeCompare(b.option.value);
+      })
+      .map((entry) => entry.option);
+  }, [columnOptions, columnSearch]);
+
   return (
     <Space size={8} align="center" wrap>
       <Select
         showSearch
-        style={{ width: 200 }}
+        style={{ width: 360 }}
         size="small"
         placeholder="Column"
         value={filter.column || undefined}
-        onChange={(val) => onColumnChange(index, val)}
-        filterOption={(input, option) =>
-          (option?.label ?? "")
-            .toString()
-            .toLowerCase()
-            .includes(input.toLowerCase())
-        }
-        options={columnOptions}
+        onChange={(val) => {
+          onColumnChange(index, val);
+          setColumnSearch("");
+        }}
+        onSearch={setColumnSearch}
+        onBlur={() => setColumnSearch("")}
+        popupMatchSelectWidth={false}
+        dropdownStyle={{ width: 520 }}
+        optionFilterProp="label"
+        filterOption={false}
+        options={filteredColumnOptions}
       />
       <Select
         style={{ width: 160 }}
@@ -716,7 +805,19 @@ const FilterBuilder: FC<FilterBuilderProps> = ({
   branchId,
 }) => {
   const columnOptions = useMemo(
-    () => schema.map((col) => ({ label: col.name, value: col.name })),
+    () =>
+      schema
+        .map((col) => ({ label: col.name, value: col.name }))
+        .sort((a, b) => {
+          const aKeyValue = isKeyValueColumn(a.value);
+          const bKeyValue = isKeyValueColumn(b.value);
+
+          if (aKeyValue !== bKeyValue) {
+            return aKeyValue ? -1 : 1;
+          }
+
+          return a.value.localeCompare(b.value);
+        }),
     [schema]
   );
 
