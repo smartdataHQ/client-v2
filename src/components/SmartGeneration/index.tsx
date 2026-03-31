@@ -162,6 +162,7 @@ interface ChangeField {
   member_type: string;
   cube: string;
   reason?: string;
+  source?: "map" | "nested" | "ai";
 }
 
 interface ChangeBlock {
@@ -897,6 +898,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   );
 
   const [profileData, setProfileData] = useState<any>(null);
+  const [skipLlm, setSkipLlm] = useState(false);
   const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -1226,7 +1228,8 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       file_name: fileNameOverride || undefined,
       cube_name: cubeNameOverride || undefined,
       selected_columns: isSubset ? [...selectedColumns] : undefined,
-    });
+      skip_llm: skipLlm || undefined,
+    } as any);
 
     if (result.error) {
       setError(result.error.message);
@@ -1238,13 +1241,43 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     const preview = genData?.change_preview;
     if (preview) {
       setChangePreview(preview as ChangePreview);
+
+      // Required fields: rewrite rule dimensions + filter dimensions (always included)
+      const requiredSet = new Set<string>(genData?.required_fields || []);
+
+      // Default selection rules:
+      //   ALWAYS checked: count measure, required fields (rewrite rules + filters)
+      //   Checked by default: regular columns (no source tag)
+      //   Unchecked (opt-in): map fields, nested fields, AI-generated fields
+      const isDefaultSelected = (f: any) => {
+        const key = `${f.cube}.${f.name}`;
+        // Always include required fields
+        if (requiredSet.has(key)) return true;
+        // Always include the count measure
+        if (f.name === "count" && f.member_type === "measure") return true;
+        // Opt-in sources: map, nested (ARRAY JOIN), AI-generated
+        if (f.source === "map" || f.source === "nested" || f.source === "ai")
+          return false;
+        // Everything else checked by default
+        return true;
+      };
+
+      const allKeys = [
+        ...(preview.fields_added || [])
+          .filter(isDefaultSelected)
+          .map((f: any) => `${f.cube}.${f.name}`),
+        ...(preview.fields_updated || [])
+          .filter(isDefaultSelected)
+          .map((f: any) => `${f.cube}.${f.name}`),
+      ];
+      setSelectedModelFields(new Set(allKeys));
     }
 
     // Capture AI metric suggestions from the LLM (if any)
     const aiSuggestions = genData?.ai_enrichment?.suggested_metrics || [];
     setSuggestedAIMetrics(aiSuggestions);
-    // All selected by default
-    setSelectedAIMetricNames(new Set(aiSuggestions.map((m: any) => m.name)));
+    // AI metrics are opt-in (unchecked by default)
+    setSelectedAIMetricNames(new Set());
 
     setStep("change_preview");
   }, [
@@ -1291,9 +1324,10 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       filters: filters.length > 0 ? filters : undefined,
       file_name: fileNameOverride || undefined,
       cube_name: cubeNameOverride || undefined,
-      selected_ai_metrics:
-        selectedAIMetricNames.size > 0 ? [...selectedAIMetricNames] : undefined,
+      selected_ai_metrics: [...selectedAIMetricNames],
       selected_columns: applyIsSubset ? [...selectedColumns] : undefined,
+      excluded_fields: excludedFields.length > 0 ? excludedFields : undefined,
+      skip_llm: skipLlm || undefined,
     } as any);
 
     if (result.error) {
@@ -1599,6 +1633,24 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
             />
           )}
 
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 8,
+            }}
+          >
+            <Checkbox
+              checked={skipLlm}
+              onChange={(e) => setSkipLlm(e.target.checked)}
+            >
+              <Text style={{ fontSize: 12 }}>
+                Skip LLM enrichment (faster, no AI metrics or descriptions)
+              </Text>
+            </Checkbox>
+          </div>
+
           <div className={styles.actions}>
             <Button
               size="large"
@@ -1753,6 +1805,19 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
           )}
 
           <div className={styles.actions}>
+            <Button
+              size="large"
+              onClick={() => {
+                setStep("select");
+                setChangePreview(null);
+                setSuggestedAIMetrics([]);
+                setSelectedAIMetricNames(new Set());
+                setSelectedModelFields(new Set());
+                setError(null);
+              }}
+            >
+              Start Over
+            </Button>
             <Button
               size="large"
               onClick={() => {
