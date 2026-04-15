@@ -897,6 +897,9 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     new Set()
   );
 
+  const [selectedModelFields, setSelectedModelFields] = useState<Set<string>>(
+    new Set()
+  );
   const [profileData, setProfileData] = useState<any>(null);
   const [skipLlm, setSkipLlm] = useState(false);
   const [progressEvents, setProgressEvents] = useState<ProgressEvent[]>([]);
