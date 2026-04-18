@@ -55,4 +55,6 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: quicklookup/synmetrix-client-v2:${{ env.IMAGE_TAG }}
+          tags: |
+            quicklookup/synmetrix-client-v2:${{ env.IMAGE_TAG }}
+            quicklookup/synmetrix-client-v2:latest
