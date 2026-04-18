@@ -1079,14 +1079,10 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
                   }))
                 );
               }
-              // Select all active columns by default
+              // Select all columns by default — user deselects what they don't want
               if (pd.columns?.length) {
-                const active = pd.columns
-                  .filter(
-                    (c: any) => c.has_values !== false && c.value_rows > 0
-                  )
-                  .map((c: any) => c.name);
-                setSelectedColumns(new Set(active));
+                const allNames = pd.columns.map((c: any) => c.name);
+                setSelectedColumns(new Set(allNames));
               }
               setStep("preview");
             } else if (eventType === "error") {
@@ -1187,12 +1183,10 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       .filter((a) => a.selected)
       .map((a) => ({ column: a.column, alias: a.alias }));
 
-    // Only pass selected_columns if user deselected some columns
-    const activeCount =
-      profileData?.columns?.filter(
-        (c: any) => c.has_values !== false && c.value_rows > 0
-      ).length ?? 0;
-    const isSubset = selectedColumns.size < activeCount;
+    // Pass selected_columns whenever the user has deselected any columns
+    const totalColumns = profileData?.columns?.length ?? 0;
+    const isSubset =
+      selectedColumns.size > 0 && selectedColumns.size < totalColumns;
 
     const result = await execSmartGen({
       datasource_id: dataSource.id!,
@@ -1284,12 +1278,10 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       .filter((a) => a.selected)
       .map((a) => ({ column: a.column, alias: a.alias }));
 
-    // Only pass selected_columns if user deselected some columns
-    const applyActiveCount =
-      profileData?.columns?.filter(
-        (c: any) => c.has_values !== false && c.value_rows > 0
-      ).length ?? 0;
-    const applyIsSubset = selectedColumns.size < applyActiveCount;
+    // Pass selected_columns whenever the user has deselected any columns
+    const applyTotalColumns = profileData?.columns?.length ?? 0;
+    const applyIsSubset =
+      selectedColumns.size > 0 && selectedColumns.size < applyTotalColumns;
 
     // Compute excluded fields: all preview fields NOT in the user's selection
     const allPreviewFields = [
