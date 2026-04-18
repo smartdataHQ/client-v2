@@ -128,26 +128,55 @@ const Input: <T extends FieldValues>(props: InputProps<T>) => JSX.Element = ({
           render={({
             field: { value, onChange },
             fieldState: { invalid, error },
-          }) => (
-            <WrapperComponent {...wrapperProps} className="">
-              <Upload
-                {...props}
-                fileList={value}
-                onChange={(e) => onChange(e.fileList as any)}
-              >
-                <Button
-                  className={cn(styles.input, props.className, {
-                    [styles.uploadError]: invalid,
-                  })}
-                  icon={<UploadOutlined />}
-                  size={size}
+          }) => {
+            // Show the filename if value is a string (already read)
+            const fileList =
+              typeof value === "string" && value
+                ? [
+                    {
+                      uid: "-1",
+                      name: "credentials.json",
+                      status: "done" as const,
+                    },
+                  ]
+                : Array.isArray(value)
+                ? value
+                : [];
+
+            return (
+              <WrapperComponent {...wrapperProps} className="">
+                <Upload
+                  {...props}
+                  fileList={fileList}
+                  beforeUpload={() => false}
+                  onChange={(e) => {
+                    const file =
+                      e.fileList[e.fileList.length - 1]?.originFileObj;
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        onChange(evt.target?.result as any);
+                      };
+                      reader.readAsText(file);
+                    } else {
+                      onChange(undefined as any);
+                    }
+                  }}
                 >
-                  {placeholder}
-                </Button>
-              </Upload>
-              <span className={styles.error}>{error?.message}</span>
-            </WrapperComponent>
-          )}
+                  <Button
+                    className={cn(styles.input, props.className, {
+                      [styles.uploadError]: invalid,
+                    })}
+                    icon={<UploadOutlined />}
+                    size={size}
+                  >
+                    {placeholder}
+                  </Button>
+                </Upload>
+                <span className={styles.error}>{error?.message}</span>
+              </WrapperComponent>
+            );
+          }}
         />
       );
     case "radio":
