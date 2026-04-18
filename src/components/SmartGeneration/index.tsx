@@ -1313,6 +1313,15 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       ).length ?? 0;
     const applyIsSubset = selectedColumns.size < applyActiveCount;
 
+    // Compute excluded fields: all preview fields NOT in the user's selection
+    const allPreviewFields = [
+      ...((changePreview?.fields_added || []) as ChangeField[]),
+      ...((changePreview?.fields_updated || []) as ChangeField[]),
+    ].map((f) => `${f.cube}.${f.name}`);
+    const excludedFields = allPreviewFields.filter(
+      (key) => !selectedModelFields.has(key)
+    );
+
     const result = await execSmartGen({
       datasource_id: dataSource.id!,
       branch_id: branchId,
@@ -1351,6 +1360,8 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     filters,
     selectedAIMetricNames,
     selectedColumns,
+    selectedModelFields,
+    changePreview,
     profileData,
     execSmartGen,
   ]);
