@@ -13961,6 +13961,7 @@ export const SmartGenDataSchemasDocument = gql`
     $cube_name: String
     $selected_ai_metrics: [String]
     $selected_columns: [String]
+    $excluded_fields: [String]
     $skip_llm: Boolean
   ) {
     smart_gen_dataschemas(
@@ -13978,6 +13979,7 @@ export const SmartGenDataSchemasDocument = gql`
       cube_name: $cube_name
       selected_ai_metrics: $selected_ai_metrics
       selected_columns: $selected_columns
+      excluded_fields: $excluded_fields
       skip_llm: $skip_llm
     ) {
       code

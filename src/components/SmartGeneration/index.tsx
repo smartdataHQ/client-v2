@@ -1079,10 +1079,14 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
                   }))
                 );
               }
-              // Select all columns by default — user deselects what they don't want
+              // Select only columns that have data — empty columns start unchecked
               if (pd.columns?.length) {
-                const allNames = pd.columns.map((c: any) => c.name);
-                setSelectedColumns(new Set(allNames));
+                const active = pd.columns
+                  .filter(
+                    (c: any) => c.has_values !== false || c.value_rows > 0
+                  )
+                  .map((c: any) => c.name);
+                setSelectedColumns(new Set(active));
               }
               setStep("preview");
             } else if (eventType === "error") {
@@ -1230,9 +1234,8 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
         if (requiredSet.has(key)) return true;
         // Always include the count measure
         if (f.name === "count" && f.member_type === "measure") return true;
-        // Opt-in sources: map, nested (ARRAY JOIN), AI-generated
-        if (f.source === "map" || f.source === "nested" || f.source === "ai")
-          return false;
+        // Opt-in: AI-generated fields start unchecked (user picks from suggestions)
+        if (f.source === "ai") return false;
         // Everything else checked by default
         return true;
       };
