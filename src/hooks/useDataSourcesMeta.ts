@@ -33,6 +33,20 @@ const operators = {
     { name: "set", title: "is set" },
     { name: "notSet", title: "is not set" },
   ],
+  boolean: [
+    { name: "equals", title: "equals" },
+    { name: "notEquals", title: "does not equal" },
+    { name: "set", title: "is set" },
+    { name: "notSet", title: "is not set" },
+  ],
+  geo: [
+    { name: "contains", title: "contains" },
+    { name: "notContains", title: "does not contain" },
+    { name: "equals", title: "equals" },
+    { name: "notEquals", title: "does not equal" },
+    { name: "set", title: "is set" },
+    { name: "notSet", title: "is not set" },
+  ],
 };
 
 export const granularities = [
@@ -99,9 +113,9 @@ class Meta {
 
   filterOperatorsForMember(memberName: string, memberType: string | string[]) {
     const member = this.resolveMember(memberName, memberType);
-    return "type" in member
-      ? operators[member.type as keyof typeof operators]
-      : operators.string;
+    if (!("type" in member)) return operators.string;
+    const key = member.type as keyof typeof operators;
+    return operators[key] ?? operators.string;
   }
 }
 
