@@ -58,6 +58,19 @@ const filterInputs = {
       value={(values && values[0]) || ""}
     />
   ),
+  boolean: ({ values, onChange }: PlaygroundFilterInputProps) => (
+    <Select
+      size="large"
+      key="input"
+      style={{ width: 300 }}
+      value={values?.[0] ?? "true"}
+      onChange={(value) => onChange([value])}
+      options={[
+        { label: "True", value: "true" },
+        { label: "False", value: "false" },
+      ]}
+    />
+  ),
   time: ({ values, onChange }: PlaygroundFilterInputProps) => (
     <DatePicker
       size="large"

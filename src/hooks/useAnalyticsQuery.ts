@@ -17,6 +17,10 @@ const defaultFilterValues = {
   number: {
     operator: "set",
   },
+  boolean: {
+    operator: "equals",
+    values: ["true"],
+  },
 };
 
 interface Action {
@@ -68,11 +72,13 @@ const reducer: Reducer<PlaygroundState, Action> = (
         return state;
       }
     } else {
+      const filterDefaults =
+        defaultFilterValues[
+          action.operatorType as keyof typeof defaultFilterValues
+        ] ?? defaultFilterValues.string;
       value = {
         ...action.value,
-        ...defaultFilterValues[
-          action.operatorType as keyof typeof defaultFilterValues
-        ],
+        ...filterDefaults,
       };
     }
 

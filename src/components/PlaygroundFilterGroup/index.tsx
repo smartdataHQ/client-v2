@@ -32,7 +32,7 @@ const FilterGroup: FC<FilterGroupProps> = ({
         <Space key={m.index} size={10} align="center">
           <PlaygroundFilterSelect
             availableMembers={availableMembers}
-            value={t(m.dimension!.title)}
+            value={m.dimension?.name}
             onChange={(dimension) => {
               trackEvent("Update Member", { memberName: addMemberName });
               if (dimension) updateMethods.update(m, { ...m, dimension });
@@ -54,7 +54,7 @@ const FilterGroup: FC<FilterGroupProps> = ({
           </Select>
           <FilterInput
             member={m}
-            key="filterInput"
+            key={`${m.index}-${m.dimension?.name}-${m.operator}`}
             updateMethods={updateMethods}
             addMemberName={addMemberName}
           />
