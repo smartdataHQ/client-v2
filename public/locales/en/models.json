@@ -34,5 +34,11 @@
     "remove_branch": "Remove branch"
   },
   "last_modify": "Last modify",
-  "no_model": "Select model to edit"
+  "no_model": "Select model to edit",
+  "smart_gen": {
+    "output_names_title": "Output names & save location",
+    "output_save_branch_label": "Save generated model to branch",
+    "output_save_branch_hint": "The new file and version are created on this branch (can differ from the sidebar). By default, matches the branch you used when profiling; change it here before Preview or Apply.",
+    "no_branches": "This data source has no branches. Create a branch first, then use Smart Generate."
+  }
 }

@@ -18,8 +18,9 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@/components/Button";
 import AuthTokensStore from "@/stores/AuthTokensStore";
-import type { DataSourceInfo, Schema } from "@/types/dataSource";
+import type { Branch, DataSourceInfo, Schema } from "@/types/dataSource";
 import {
+  Branch_Statuses_Enum,
   useSmartGenDataSchemasMutation,
   useFetchMetaQuery,
 } from "@/graphql/generated";
@@ -846,7 +847,8 @@ interface SmartGenerationProps {
   dataSource: DataSourceInfo;
   schema: Schema | undefined;
   branchId: string;
-  onComplete: () => void;
+  branches: Branch[];
+  onComplete: (savedBranchId: string) => void;
   onCancel: () => void;
   /** Pre-selected table schema (e.g. "cst") from model provenance — skips table selection */
   initialSchema?: string;
@@ -860,6 +862,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   dataSource,
   schema,
   branchId,
+  branches,
   onComplete,
   onCancel,
   initialSchema,
@@ -867,8 +870,12 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   previousFilters,
 }) => {
   const { t } = useTranslation(["models", "common"]);
-  const hasInitial = !!(initialSchema && initialTable);
   const [step, setStep] = useState<SmartGenStep>("select");
+  const [targetBranchId, setTargetBranchId] = useState(branchId);
+  const [lockedBranchId, setLockedBranchId] = useState<string | null>(null);
+  const [saveToBranchId, setSaveToBranchId] = useState("");
+
+  const metaBranchId = lockedBranchId || targetBranchId;
   const [filters, setFilters] = useState<FilterCondition[]>(
     previousFilters || []
   );
@@ -907,19 +914,34 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
 
   const [smartGenResult, execSmartGen] = useSmartGenDataSchemasMutation();
 
+  useEffect(() => {
+    setTargetBranchId(branchId);
+  }, [branchId]);
+
+  useEffect(() => {
+    if (!branches?.length) return;
+    const ids = new Set(branches.map((b) => b.id));
+    if (targetBranchId && ids.has(targetBranchId)) return;
+    if (branchId && ids.has(branchId)) {
+      setTargetBranchId(branchId);
+      return;
+    }
+    setTargetBranchId(branches[0].id);
+  }, [branches, branchId, targetBranchId]);
+
   // Fetch Cube.js meta — same query the Explore page uses.
   // pause=false when both datasource + branch are available (mirrors Explore page pattern).
   const [metaResult, execMetaQuery] = useFetchMetaQuery({
-    variables: { datasource_id: dataSource.id!, branch_id: branchId },
-    pause: !dataSource.id || !branchId,
+    variables: { datasource_id: dataSource.id!, branch_id: metaBranchId },
+    pause: !dataSource.id || !metaBranchId,
   });
 
   // Re-fetch meta when datasource or branch changes
   useEffect(() => {
-    if (dataSource.id && branchId) {
+    if (dataSource.id && metaBranchId) {
       execMetaQuery();
     }
-  }, [dataSource.id, branchId, execMetaQuery]);
+  }, [dataSource.id, metaBranchId, execMetaQuery]);
 
   // Build dimension map: raw ClickHouse column name → fully-qualified Cube.js
   // dimension member (e.g. "event" → "semantic_events.event").
@@ -1009,6 +1031,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
       abortRef.current = controller;
 
       setStep("profiling");
+      setLockedBranchId(targetBranchId);
       setError(null);
       setRawProfile(null);
       setChangePreview(null);
@@ -1026,12 +1049,12 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
           Accept: "text/event-stream",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           "x-hasura-datasource-id": dataSource.id!,
-          "x-hasura-branch-id": branchId,
+          "x-hasura-branch-id": targetBranchId,
         },
         body: JSON.stringify({
           table: tblName,
           schema: tblSchema,
-          branchId,
+          branchId: targetBranchId,
           ...(filters.length > 0 ? { filters } : {}),
         }),
         signal: controller.signal,
@@ -1088,10 +1111,13 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
                   .map((c: any) => c.name);
                 setSelectedColumns(new Set(active));
               }
+              setSaveToBranchId(targetBranchId);
               setStep("preview");
             } else if (eventType === "error") {
               setError(data.error || "Profiling failed");
               setStep("select");
+              setLockedBranchId(null);
+              setSaveToBranchId("");
             }
           };
 
@@ -1130,9 +1156,11 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
           if (err.name === "AbortError") return; // cancelled by user
           setError(err.message || "Profiling failed");
           setStep("select");
+          setLockedBranchId(null);
+          setSaveToBranchId("");
         });
     },
-    [dataSource.id, branchId, filters]
+    [dataSource.id, targetBranchId, filters]
   );
 
   // Sync late-arriving initial selection (e.g. after page refresh).
@@ -1177,6 +1205,20 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     return options;
   }, [schema]);
 
+  const branchOptions = useMemo(
+    () =>
+      (branches || []).map((b) => ({
+        value: b.id,
+        label:
+          b.status === Branch_Statuses_Enum.Active
+            ? `${b.name} (${t("common:words.default")})`
+            : b.name,
+      })),
+    [branches, t]
+  );
+
+  const saveBranch = saveToBranchId || lockedBranchId || targetBranchId;
+
   const isTableOptionsLoading = !schema || tableOptions.length === 0;
 
   const selectedTableValue = useMemo(() => {
@@ -1196,9 +1238,13 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   }, []);
 
   const handleProfile = useCallback(() => {
+    if (!branchOptions.length) {
+      setError(t("models:smart_gen.no_branches"));
+      return;
+    }
     if (!selectedTable || !selectedSchema) return;
     startProfile(selectedSchema, selectedTable);
-  }, [selectedTable, selectedSchema, startProfile]);
+  }, [branchOptions.length, selectedTable, selectedSchema, startProfile, t]);
 
   // Preview changes (dry-run) — no ClickHouse query, uses cached profile
   const handlePreviewChanges = useCallback(async () => {
@@ -1216,7 +1262,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
 
     const result = await execSmartGen({
       datasource_id: dataSource.id!,
-      branch_id: branchId,
+      branch_id: saveBranch,
       table_name: selectedTable,
       table_schema: selectedSchema,
       merge_strategy: mergeStrategy,
@@ -1282,7 +1328,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     setStep("change_preview");
   }, [
     dataSource.id,
-    branchId,
+    saveBranch,
     selectedTable,
     selectedSchema,
     mergeStrategy,
@@ -1319,7 +1365,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
 
     const result = await execSmartGen({
       datasource_id: dataSource.id!,
-      branch_id: branchId,
+      branch_id: saveBranch,
       table_name: selectedTable,
       table_schema: selectedSchema,
       merge_strategy: mergeStrategy,
@@ -1346,7 +1392,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     setStep("done");
   }, [
     dataSource.id,
-    branchId,
+    saveBranch,
     selectedTable,
     selectedSchema,
     mergeStrategy,
@@ -1365,6 +1411,8 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
     abortRef.current?.abort();
     setError(null);
     setStep("select");
+    setLockedBranchId(null);
+    setSaveToBranchId("");
   }, []);
 
   const genData = smartGenResult.data?.smart_gen_dataschemas;
@@ -1383,6 +1431,15 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
           key expansion.
         </Text>
       </div>
+
+      {step === "select" && branchOptions.length === 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          className={styles.branchAlert}
+          message={t("models:smart_gen.no_branches")}
+        />
+      )}
 
       {/* Step 1: Table Selection */}
       {step === "select" && (
@@ -1440,7 +1497,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
                 tableName={selectedTable}
                 tableSchema={selectedSchema}
                 datasourceId={dataSource.id!}
-                branchId={branchId}
+                branchId={metaBranchId}
               />
             </div>
           )}
@@ -1461,7 +1518,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
             <Button
               type="primary"
               size="large"
-              disabled={!selectedTable}
+              disabled={!selectedTable || branchOptions.length === 0}
               onClick={handleProfile}
             >
               Profile Table
@@ -1587,8 +1644,33 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
             </div>
           )}
 
-          <div style={{ margin: "16px 0" }}>
-            <Title level={5}>Output Names</Title>
+          <div
+            className={styles.outputNamesSection}
+            style={{ margin: "16px 0" }}
+          >
+            <Title level={5}>{t("models:smart_gen.output_names_title")}</Title>
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 6, fontSize: 12 }}
+            >
+              {t("models:smart_gen.output_save_branch_label")}
+            </Text>
+            <Select
+              className={styles.saveBranchInOutput}
+              size="large"
+              showSearch
+              optionFilterProp="label"
+              value={saveToBranchId || targetBranchId}
+              onChange={(v) => setSaveToBranchId(String(v))}
+              options={branchOptions}
+              style={{ width: "100%", maxWidth: 480, marginBottom: 10 }}
+            />
+            <Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 12, fontSize: 12 }}
+            >
+              {t("models:smart_gen.output_save_branch_hint")}
+            </Text>
             <Space size={16}>
               <div>
                 <Text
@@ -1665,6 +1747,8 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
               size="large"
               onClick={() => {
                 setStep("select");
+                setLockedBranchId(null);
+                setSaveToBranchId("");
                 setError(null);
               }}
             >
@@ -1818,6 +1902,8 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
               size="large"
               onClick={() => {
                 setStep("select");
+                setLockedBranchId(null);
+                setSaveToBranchId("");
                 setChangePreview(null);
                 setSuggestedAIMetrics([]);
                 setSelectedAIMetricNames(new Set());
@@ -1881,7 +1967,11 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
           )}
 
           <div className={styles.actions}>
-            <Button type="primary" size="large" onClick={onComplete}>
+            <Button
+              type="primary"
+              size="large"
+              onClick={() => onComplete(saveBranch)}
+            >
               Done
             </Button>
           </div>
