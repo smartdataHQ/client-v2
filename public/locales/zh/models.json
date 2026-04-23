@@ -34,5 +34,11 @@
     "remove_branch": "删除分支"
   },
   "last_modify": "上次修改",
-  "no_model": "选择要编辑的模型"
+  "no_model": "选择要编辑的模型",
+  "smart_gen": {
+    "output_names_title": "输出名称与保存位置",
+    "output_save_branch_label": "将生成的模型保存到分支",
+    "output_save_branch_hint": "新文件和版本会写入此分支（可与侧栏不同）。默认与剖析时所在分支一致；在预览或应用前可在此修改。",
+    "no_branches": "此数据源还没有分支。请先创建分支，再使用智能生成。"
+  }
 }

@@ -91,7 +91,7 @@ interface ModelsProps {
     } & Partial<Dataschema>)[]
   ) => void;
   onGenSubmit: (values: object, format: string) => void;
-  onSmartGenComplete: () => void;
+  onSmartGenComplete: (savedBranchId: string) => void;
   smartGenModalVisible?: boolean;
   onDataSourceChange: (dataSource: DataSourceInfo | null) => void;
   sqlError?: object;
@@ -321,6 +321,7 @@ export const Models: React.FC<ModelsProps> = ({
                   dataSource={dataSource!}
                   schema={tablesSchema}
                   branchId={currentBranch?.id || ""}
+                  branches={branches}
                   onComplete={onSmartGenComplete}
                   onCancel={onModalClose}
                   initialTable={
@@ -621,9 +622,12 @@ const ModelsWrapper: React.FC = () => {
     onModalClose(true);
   };
 
-  const onSmartGenComplete = () => {
+  const onSmartGenComplete = (savedBranchId: string) => {
     execVersionAll();
-    execQueryMeta({ id: curSource?.id, branch_id: currentBranch?.id });
+    execQueryMeta({
+      id: curSource?.id,
+      branch_id: savedBranchId || currentBranch?.id,
+    });
     onModalClose(true);
   };
 
