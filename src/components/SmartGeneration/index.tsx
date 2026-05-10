@@ -1102,12 +1102,59 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
                   }))
                 );
               }
-              // Select only columns that have data — empty columns start unchecked
+              // Auto-select columns that carry analytical signal. Mirrors the
+              // skip cascade in cubeBuilder.processColumns so the user sees the
+              // same fields checked as would be auto-included by the backend.
+              // Skipped:
+              //   - has_values === false (no rows / never populated)
+              //   - STRING/UUID with unique_values === 0 (only empty strings)
+              //   - STRING/UUID with the single LC-probed value being '', whitespace, '0' or 0
+              //   - NUMBER with min===max===0 (all-zero column)
+              //   - BOOLEAN/Int8 with min===max OR unique_values===1 (constant flag)
               if (pd.columns?.length) {
+                const isAlwaysSameBool = (c: any) =>
+                  c.value_type === "BOOLEAN" &&
+                  ((c.min_value != null &&
+                    c.max_value != null &&
+                    c.min_value === c.max_value) ||
+                    c.unique_values === 1);
+                const isAllZeroNumber = (c: any) =>
+                  c.value_type === "NUMBER" &&
+                  c.min_value != null &&
+                  c.max_value != null &&
+                  Number(c.min_value) === 0 &&
+                  Number(c.max_value) === 0;
+                const isEmptyConstantString = (c: any) => {
+                  if (c.value_type !== "STRING" && c.value_type !== "UUID")
+                    return false;
+                  if (c.column_type === "MAP") return false;
+                  if (c.unique_values === 0) return true;
+                  if (
+                    c.unique_values === 1 &&
+                    Array.isArray(c.lc_values) &&
+                    c.lc_values.length === 1
+                  ) {
+                    const v = c.lc_values[0];
+                    return (
+                      v == null ||
+                      v === "" ||
+                      v === "0" ||
+                      v === 0 ||
+                      (typeof v === "string" && v.trim() === "")
+                    );
+                  }
+                  return false;
+                };
+                const carriesSignal = (c: any) => {
+                  if (c.has_values === false && !(c.value_rows > 0))
+                    return false;
+                  if (isAlwaysSameBool(c)) return false;
+                  if (isAllZeroNumber(c)) return false;
+                  if (isEmptyConstantString(c)) return false;
+                  return true;
+                };
                 const active = pd.columns
-                  .filter(
-                    (c: any) => c.has_values !== false || c.value_rows > 0
-                  )
+                  .filter(carriesSignal)
                   .map((c: any) => c.name);
                 setSelectedColumns(new Set(active));
               }
