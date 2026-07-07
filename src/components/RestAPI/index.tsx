@@ -57,10 +57,16 @@ const defaultState = {
 };
 
 const normalizeOrders = (orders: SortBy[]) => {
-  return (orders || []).reduce(
-    (acc, cur) => ({ ...acc, [cur.id]: cur.desc ? "desc" : "asc" }),
-    {}
-  );
+  // Drop the "no order selected" placeholder the query builder emits
+  // (`emptyCube.emptyKey`). The legacy Cube planner silently ignored the
+  // unresolvable member; the Tesseract planner rejects it with
+  // "Cannot resolve: emptyCube", which 500s the query.
+  return (orders || [])
+    .filter((cur) => cur.id && cur.id !== "emptyCube.emptyKey")
+    .reduce(
+      (acc, cur) => ({ ...acc, [cur.id]: cur.desc ? "desc" : "asc" }),
+      {}
+    );
 };
 
 const FORMAT_OPTIONS = [
