@@ -26,7 +26,6 @@ import useModelsIde from "@/hooks/useModelsIde";
 import useSources from "@/hooks/useSources";
 import useCubeRegistry from "@/hooks/useCubeRegistry";
 import useCheckResponse from "@/hooks/useCheckResponse";
-import { parseProvenance } from "@/utils/provenanceParser";
 import calcChecksum from "@/utils/helpers/dataschemasChecksum";
 import getTables from "@/utils/helpers/getTables";
 import getCurrentBranch from "@/utils/helpers/getCurrentBranch";
@@ -101,8 +100,6 @@ interface ModelsProps {
   onConnect: () => void;
   versionsCount?: number;
   onVersionsOpen?: () => void;
-  onReprofile?: (schema: Dataschema) => void;
-  reprofileTarget?: { table: string; schema: string } | null;
   cubeRegistry?: CubeRegistry;
   onRefreshRegistry?: () => void;
 }
@@ -145,8 +142,6 @@ export const Models: React.FC<ModelsProps> = ({
   onConnect,
   versionsCount,
   onVersionsOpen,
-  onReprofile,
-  reprofileTarget,
   cubeRegistry,
   onRefreshRegistry,
 }) => {
@@ -269,7 +264,6 @@ export const Models: React.FC<ModelsProps> = ({
             dataSourceId={dataSource?.id}
             versionsCount={versionsCount}
             onVersionsOpen={onVersionsOpen}
-            onReprofile={onReprofile}
           />
         </Spin>
       }
@@ -333,16 +327,8 @@ export const Models: React.FC<ModelsProps> = ({
                   branches={branches}
                   onComplete={onSmartGenComplete}
                   onCancel={onModalClose}
-                  initialTable={
-                    reprofileTarget?.table ??
-                    smartGenQueryTarget?.table ??
-                    undefined
-                  }
-                  initialSchema={
-                    reprofileTarget?.schema ??
-                    smartGenQueryTarget?.schema ??
-                    undefined
-                  }
+                  initialTable={smartGenQueryTarget?.table ?? undefined}
+                  initialSchema={smartGenQueryTarget?.schema ?? undefined}
                 />
               </Modal>
             </>
@@ -427,13 +413,7 @@ const ModelsWrapper: React.FC = () => {
     variables: { branch_id: currentBranch?.id },
   });
 
-  const [reprofileTarget, setReprofileTarget] = useState<{
-    table: string;
-    schema: string;
-  } | null>(null);
-
   const onModalClose = (goBack: boolean = false) => {
-    setReprofileTarget(null);
     if (history.state && goBack) {
       history.back();
     } else {
@@ -641,20 +621,6 @@ const ModelsWrapper: React.FC = () => {
       branch_id: savedBranchId || currentBranch?.id,
     });
     onModalClose(true);
-  };
-
-  const onReprofile = (fileSchema: Dataschema) => {
-    // Parse source table/schema from the model's provenance metadata
-    const provenance = parseProvenance(fileSchema.code || "");
-    if (provenance?.sourceTable && provenance?.sourceDatabase) {
-      setReprofileTarget({
-        table: provenance.sourceTable,
-        schema: provenance.sourceDatabase,
-      });
-    } else {
-      setReprofileTarget(null);
-    }
-    setLocation(`${basePath}/${curSource?.id}/${currentBranch?.id}/smartgen`);
   };
 
   const fetching =
@@ -1001,8 +967,6 @@ const ModelsWrapper: React.FC = () => {
           `${basePath}/${curSource?.id}/${currentBranch?.id}/versions`
         )
       }
-      onReprofile={isClickHouse ? onReprofile : undefined}
-      reprofileTarget={reprofileTarget}
       cubeRegistry={cubeRegistry}
       onRefreshRegistry={refreshRegistry}
     />
