@@ -1,8 +1,9 @@
-import { Col, Divider, Dropdown, Radio, Row, Tooltip } from "antd";
+import { Col, Divider, Dropdown, Radio, Row, Tooltip, message } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import { useResponsive, useSetState } from "ahooks";
 import { useTranslation } from "react-i18next";
 import cn from "classnames";
+import { useEffect, useRef, useState } from "react";
 
 import useAnalyticsQueryMembers from "@/hooks/useAnalyticsQueryMembers";
 import useFormatExport from "@/hooks/useFormatExport";
@@ -24,6 +25,7 @@ import type { Branch, DataSourceInfo } from "@/types/dataSource";
 import AlertIcon from "@/assets/alert.svg";
 import ReportIcon from "@/assets/report.svg";
 import ArrowIcon from "@/assets/arrow-small-right.svg";
+import CopyIcon from "@/assets/copy.svg";
 
 import s from "./index.module.less";
 
@@ -31,6 +33,11 @@ import type { CollapsePanelProps, RadioChangeEvent } from "antd";
 import type { FC, ReactNode } from "react";
 
 type SortUpdater = (nextSortBy: SortBySet[]) => void;
+
+const formatQueryTime = (ms: number): string => {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  return `${(ms / 1000).toFixed(2)} s`;
+};
 
 interface ExploreDataSectionProps extends Omit<CollapsePanelProps, "header"> {
   width?: number;
@@ -40,6 +47,8 @@ interface ExploreDataSectionProps extends Omit<CollapsePanelProps, "header"> {
   onOpenModal: (type: string) => void;
   onExec: any;
   onQueryChange: (query: string, ...args: any) => void | SortUpdater;
+  onApplyQuery?: (state: PlaygroundState) => void;
+  onResetQuery?: () => void;
   disabled: boolean;
   playgroundState: PlaygroundState;
   dataSource?: DataSourceInfo;
@@ -69,6 +78,8 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
     onOpenModal = () => {},
     onExec = () => {},
     onQueryChange = () => {},
+    onApplyQuery,
+    onResetQuery,
     state: workspaceState,
     playgroundState,
     queryState,
@@ -87,12 +98,34 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
   const [currState, updateState] = useSetState({
     section: workspaceState?.dataSection || "sql",
   });
+  const [queryTimeMs, setQueryTimeMs] = useState<number | null>(null);
+  const queryStartedAt = useRef<number | null>(null);
+  const wasLoading = useRef(false);
 
   const { exportData, isExporting } = useFormatExport({
     datasourceId: dataSource?.id,
     branchId: currentBranch?.id || undefined,
     query: playgroundState,
   });
+
+  useEffect(() => {
+    if (loading) {
+      wasLoading.current = true;
+      return;
+    }
+
+    if (wasLoading.current && queryStartedAt.current != null) {
+      setQueryTimeMs(performance.now() - queryStartedAt.current);
+      queryStartedAt.current = null;
+      wasLoading.current = false;
+    }
+  }, [loading]);
+
+  const handleExec = () => {
+    queryStartedAt.current = performance.now();
+    setQueryTimeMs(null);
+    onExec();
+  };
 
   // const formConfig = {
   //   rows: {
@@ -231,6 +264,9 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
             {t("data_section.shown")}: {rows.length} / {limit},{" "}
             {t("data_section.offset")}: {offset}, {t("data_section.columns")}:{" "}
             {columns.length}
+            {queryTimeMs != null && !loading && (
+              <>, Query time: {formatQueryTime(queryTimeMs)}</>
+            )}
           </span>
         }
       />
@@ -252,6 +288,7 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
     onQueryChange,
     settings,
     rowHeight,
+    queryTimeMs,
     t,
     limit,
     empty,
@@ -268,7 +305,18 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
 
     return (
       <>
-        <span className={s.sqlHeader}>{t("SQL")}</span>
+        <div className={s.sqlHeaderRow}>
+          <span className={s.sqlHeader}>{t("SQL")}</span>
+          <Button
+            size="small"
+            type="default"
+            className={s.sqlCopy}
+            icon={<CopyIcon />}
+            onClick={() => navigator.clipboard.writeText(rawSql.sql || "")}
+          >
+            Copy
+          </Button>
+        </div>
         <PrismCode
           lang="sql"
           code={rawSql?.sql || ""}
@@ -285,10 +333,27 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
           dataSourceId={dataSource.id}
           branchId={currentBranch.id}
           playgroundState={playgroundState}
+          onApplyQuery={(nextState) => {
+            onApplyQuery?.(nextState);
+            updateState({ section: "results" });
+            onSectionChange("results");
+          }}
         />
       );
     }
-  }, [currentBranch?.id, dataSource?.id, playgroundState]);
+  }, [
+    currentBranch?.id,
+    dataSource?.id,
+    onApplyQuery,
+    onSectionChange,
+    playgroundState,
+    updateState,
+  ]);
+
+  const handleResetQuery = () => {
+    onResetQuery?.();
+    message.success("Selection cleared");
+  };
 
   const onChange = (values: Partial<DataSchemaFormValues>) => {
     if (values.limit !== limit) {
@@ -306,17 +371,34 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
       <div className={s.header}>
         <Row justify={"start"} align={"middle"} gutter={[8, 8]}>
           <Col order={isMobile ? 1 : -1} xs={isMobile ? 24 : undefined}>
-            <Button
-              className={s.run}
-              type="primary"
-              onClick={onExec}
-              disabled={!queryState?.columns?.length || disabled || loading}
-            >
-              <span style={{ marginRight: 10 }}>
-                {t("data_section.run_query")}
-              </span>
-              <ArrowIcon />
-            </Button>
+            <div className={s.runActions}>
+              <Button
+                className={s.run}
+                type="primary"
+                onClick={handleExec}
+                disabled={!queryState?.columns?.length || disabled || loading}
+              >
+                <span style={{ marginRight: 10 }}>
+                  {t("data_section.run_query")}
+                </span>
+                <ArrowIcon />
+              </Button>
+              {onResetQuery && (
+                <Button
+                  className={s.reset}
+                  type="primary"
+                  onClick={handleResetQuery}
+                  disabled={!queryState?.columns?.length || loading}
+                >
+                  Reset
+                </Button>
+              )}
+              {queryTimeMs != null && !loading && (
+                <span className={s.queryTime}>
+                  Query time: {formatQueryTime(queryTimeMs)}
+                </span>
+              )}
+            </div>
           </Col>
           <Col xs={isMobile ? 24 : undefined}>
             <ExploreSettingsForm

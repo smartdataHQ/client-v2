@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { set, getOr, get } from "unchanged";
 import { useTranslation } from "react-i18next";
-import { Typography } from "antd";
+import { Checkbox, Typography } from "antd";
 
 import { SHOWN_CATEGORIES } from "@/components/ExploreCubes";
 import ExploreCubesSubSection from "@/components/ExploreCubesSubSection";
@@ -18,6 +18,7 @@ import type {
 import s from "./index.module.less";
 
 import type { ReactNode } from "react";
+import type { CheckboxChangeEvent } from "antd/es/checkbox";
 
 const { Text } = Typography;
 
@@ -106,6 +107,10 @@ const getSubSections = (
     freeMembers,
   };
 };
+
+// Raw (no granularity) members only — avoid selecting every time granularity
+const getSelectableMembers = (catMembers: CubeMember[]): CubeMember[] =>
+  catMembers.filter((member) => !member.granularity);
 
 const Cube = ({
   members,
@@ -199,13 +204,10 @@ const Cube = ({
     );
   };
 
-  const getCategory = (category: string): ReactNode => {
-    let catMembers = getMembersCategory(category);
-    if (!catMembers.length) {
-      return null;
-    }
+  const expandCategoryMembers = (category: string): CubeMember[] => {
+    const catMembers = getMembersCategory(category);
 
-    catMembers = catMembers.reduce((acc: CubeMember[], member: CubeMember) => {
+    return catMembers.reduce((acc: CubeMember[], member: CubeMember) => {
       let newMembers = acc;
 
       if (member.type === "time") {
@@ -216,6 +218,52 @@ const Cube = ({
       }
       return newMembers;
     }, []);
+  };
+
+  const onSelectAllCategory = (
+    category: string,
+    catMembers: CubeMember[],
+    e: CheckboxChangeEvent
+  ) => {
+    e.stopPropagation();
+
+    const selectableMembers = getSelectableMembers(catMembers);
+    const categoryCubeMembers = getSelectedCategoryMembers(category);
+    const selected = selectableMembers.filter((member) =>
+      categoryCubeMembers.includes(member.name)
+    );
+    const unselected = selectableMembers.filter(
+      (member) => !categoryCubeMembers.includes(member.name)
+    );
+
+    if (e.target.checked) {
+      if (unselected.length) {
+        onMemberSelect(category).addMany(unselected);
+      }
+      return;
+    }
+
+    // Also clear any selected time granularities for this cube/category
+    const selectedInCategory = catMembers.filter((member) =>
+      categoryCubeMembers.includes(member.name)
+    );
+    const toRemove = selectedInCategory.length ? selectedInCategory : selected;
+
+    if (toRemove.length) {
+      onMemberSelect(category).removeMany(
+        toRemove.map((member) => ({
+          ...member,
+          index: membersIndex[member.name]?.index,
+        }))
+      );
+    }
+  };
+
+  const getCategory = (category: string): ReactNode => {
+    const catMembers = expandCategoryMembers(category);
+    if (!catMembers.length) {
+      return null;
+    }
 
     const { subSections, freeMembers } = getSubSections(
       catMembers,
@@ -223,13 +271,31 @@ const Cube = ({
     );
 
     const categoryCubeMembers = getSelectedCategoryMembers(category);
+    const selectableMembers = getSelectableMembers(catMembers);
+    const allSelected =
+      selectableMembers.length > 0 &&
+      selectableMembers.every((member) =>
+        categoryCubeMembers.includes(member.name)
+      );
     const selectedFilters: string[] = Object.values(
       selectedMembers.filters || {}
     ).map((m) => m.dimension!.name);
 
     return (
       <div key={category} className={s.categorySection}>
-        <Text className={s.categoryTitle}>{t(`common:words.${category}`)}</Text>
+        <div className={s.categoryHeader}>
+          <Text className={s.categoryTitle}>
+            {t(`common:words.${category}`)}
+          </Text>
+          <Checkbox
+            className={s.selectAll}
+            checked={allSelected}
+            onChange={(e) => onSelectAllCategory(category, catMembers, e)}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {t("common:words.select_all")}
+          </Checkbox>
+        </div>
         <div className={s.freeMembers}>
           {freeMembers.map((member, index) =>
             getItem(
@@ -272,16 +338,20 @@ const Cube = ({
   );
 };
 
+interface MemberSelectApi {
+  add: (member: CubeMember) => void;
+  addMany: (members: CubeMember[]) => void;
+  remove: (member: CubeMember) => void;
+  removeMany: (members: CubeMember[]) => void;
+  update: (member: CubeMember, newValue: any) => void;
+}
+
 interface CubeProps {
   members: CubeMembers;
   onMemberSelect: (
     memberType?: string,
     toQuery?: (member: CubeMember) => any
-  ) => {
-    add: (member: CubeMember) => void;
-    remove: (member: CubeMember) => void;
-    update: (member: CubeMember, newValue: any) => void;
-  };
+  ) => MemberSelectApi;
   selectedMembers: Record<string, CubeMember[]>;
 }
 

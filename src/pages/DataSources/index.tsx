@@ -8,7 +8,7 @@ import {
   Spin,
   message,
 } from "antd";
-import { CopyOutlined, SettingOutlined } from "@ant-design/icons";
+import { SettingOutlined } from "@ant-design/icons";
 import { useResponsive } from "ahooks";
 import { useEffect, useState } from "react";
 import { useParams } from "@vitjs/runtime";
@@ -138,20 +138,19 @@ export const DataSources = ({
                     label: t("common:words.edit"),
                     onClick: () => dataSource.id && onEdit(dataSource.id),
                   },
+                  isPortalAdmin &&
+                    otherTeams.length > 0 && {
+                      key: "copy",
+                      label: t("common:words.copy_to_team", "Copy to team"),
+                      onClick: () =>
+                        dataSource.id && setCopyModalDs(dataSource.id),
+                    },
                   {
                     key: "generate",
                     label: t("common:words.generate_models"),
                     onClick: () =>
                       dataSource.id && onGenerateModel(dataSource.id),
                   },
-                  isPortalAdmin &&
-                    otherTeams.length > 0 && {
-                      key: "copy",
-                      icon: <CopyOutlined />,
-                      label: t("common:words.copy_to_team", "Copy to team"),
-                      onClick: () =>
-                        dataSource.id && setCopyModalDs(dataSource.id),
-                    },
                   {
                     key: "delete",
                     className: styles.deleteItem,

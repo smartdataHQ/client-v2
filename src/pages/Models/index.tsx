@@ -30,10 +30,12 @@ import { parseProvenance } from "@/utils/provenanceParser";
 import calcChecksum from "@/utils/helpers/dataschemasChecksum";
 import getTables from "@/utils/helpers/getTables";
 import getCurrentBranch from "@/utils/helpers/getCurrentBranch";
+import { formatCompileErrors } from "@/utils/helpers/formatCompileErrors";
 import type { CubeRegistry } from "@/utils/cubejs-language/registry";
 import type { Branch, DataSourceInfo, Schema } from "@/types/dataSource";
 import type { Dataschema } from "@/types/dataschema";
 import type { Version } from "@/types/version";
+import type { ConsoleError } from "@/components/Console";
 import type { Branches_Insert_Input } from "@/graphql/generated";
 import type { CreateBranchFormValues } from "@/components/BranchSelection";
 import CurrentUserStore from "@/stores/CurrentUserStore";
@@ -81,7 +83,7 @@ interface ModelsProps {
   schemaFetching?: boolean;
   onModalClose: () => void;
   data?: object[];
-  validationError?: string;
+  validationError?: string | ConsoleError[];
   isConsoleOpen?: boolean;
   toggleConsole?: () => void;
   onSaveVersion: (
@@ -222,11 +224,14 @@ export const Models: React.FC<ModelsProps> = ({
           <Space align="start" size={16}>
             {dataSource.name}
 
-            {!isMobile && validationError && (
-              <StatusBadge className={styles.errorBadge} status="error">
-                {t("models:alerts.compilation_error")}
-              </StatusBadge>
-            )}
+            {!isMobile &&
+              (Array.isArray(validationError)
+                ? validationError.length > 0
+                : !!validationError) && (
+                <StatusBadge className={styles.errorBadge} status="error">
+                  {t("models:alerts.compilation_error")}
+                </StatusBadge>
+              )}
           </Space>
         ) : (
           t("models")
@@ -291,6 +296,8 @@ export const Models: React.FC<ModelsProps> = ({
                 validationError={validationError}
                 cubeRegistry={cubeRegistry}
                 onRefreshRegistry={onRefreshRegistry}
+                branchName={currentBranch?.name}
+                versionNumber={versionsCount}
               />
             </div>
           </div>
@@ -319,6 +326,7 @@ export const Models: React.FC<ModelsProps> = ({
               >
                 <SmartGeneration
                   dataSource={dataSource!}
+                  dataSources={dataSources}
                   schema={tablesSchema}
                   branchId={currentBranch?.id || ""}
                   branches={branches}
@@ -531,12 +539,15 @@ const ModelsWrapper: React.FC = () => {
   });
 
   const validationError = useMemo(
-    () => metaData?.error?.message,
+    () => formatCompileErrors(metaData?.error?.message),
     [metaData.error]
   );
 
   useEffect(() => {
-    toggleConsole(!!validationError);
+    const hasErrors = Array.isArray(validationError)
+      ? validationError.length > 0
+      : !!validationError;
+    toggleConsole(hasErrors);
   }, [validationError]);
 
   const sqlResult = useMemo(

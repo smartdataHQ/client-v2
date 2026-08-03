@@ -6,6 +6,7 @@ import ExploreDataSection from "@/components/ExploreDataSection";
 import ErrorFound from "@/components/ErrorFound";
 import ExploreCubes from "@/components/ExploreCubes";
 import usePlayground, { queryStateKeys } from "@/hooks/usePlayground";
+import { initialState } from "@/hooks/useAnalyticsQuery";
 import useExploreWorkspace from "@/hooks/useExploreWorkspace";
 import useDimensions from "@/hooks/useDimensions";
 import useLocation from "@/hooks/useLocation";
@@ -83,6 +84,7 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
       setOffset,
       setPage,
       setOrderBy,
+      doReset,
     },
     settings,
     dispatchSettings,
@@ -187,6 +189,8 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
       currentBranch={currentBranch}
       onExec={onRunQuery}
       onQueryChange={onQueryChange}
+      onApplyQuery={doReset}
+      onResetQuery={() => doReset(initialState)}
       onOpenModal={onOpenModal}
       disabled={!isQueryChanged}
       state={state}

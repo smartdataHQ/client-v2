@@ -23,6 +23,7 @@ import {
   Branch_Statuses_Enum,
   useSmartGenDataSchemasMutation,
   useFetchMetaQuery,
+  useFetchTablesQuery,
 } from "@/graphql/generated";
 
 import FilterBuilder from "./FilterBuilder";
@@ -845,6 +846,8 @@ interface ArrayJoinSelection {
 
 interface SmartGenerationProps {
   dataSource: DataSourceInfo;
+  /** All available datasources for the select step (defaults to [dataSource]) */
+  dataSources?: DataSourceInfo[];
   schema: Schema | undefined;
   branchId: string;
   branches: Branch[];
@@ -859,10 +862,11 @@ interface SmartGenerationProps {
 }
 
 const SmartGeneration: FC<SmartGenerationProps> = ({
-  dataSource,
-  schema,
-  branchId,
-  branches,
+  dataSource: initialDataSource,
+  dataSources,
+  schema: initialSchemaData,
+  branchId: initialBranchId,
+  branches: initialBranches,
   onComplete,
   onCancel,
   initialSchema,
@@ -870,6 +874,61 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   previousFilters,
 }) => {
   const { t } = useTranslation(["models", "common"]);
+
+  const availableSources = useMemo(() => {
+    const list =
+      dataSources && dataSources.length > 0 ? dataSources : [initialDataSource];
+    return list.filter(Boolean) as DataSourceInfo[];
+  }, [dataSources, initialDataSource]);
+
+  const [selectedDataSourceId, setSelectedDataSourceId] = useState<string>(
+    () => availableSources[0]?.id || initialDataSource.id || ""
+  );
+
+  useEffect(() => {
+    if (!availableSources.length) return;
+    if (!availableSources.some((ds) => ds.id === selectedDataSourceId)) {
+      setSelectedDataSourceId(availableSources[0].id || "");
+    }
+  }, [availableSources, selectedDataSourceId]);
+
+  const dataSource =
+    availableSources.find((ds) => ds.id === selectedDataSourceId) ||
+    availableSources[0] ||
+    initialDataSource;
+
+  const branches = dataSource.branches?.length
+    ? dataSource.branches
+    : selectedDataSourceId === initialDataSource.id
+    ? initialBranches
+    : dataSource.branches || [];
+
+  const branchId =
+    branches.find((b) => b.status === Branch_Statuses_Enum.Active)?.id ||
+    branches[0]?.id ||
+    (selectedDataSourceId === initialDataSource.id ? initialBranchId : "") ||
+    "";
+
+  const [tablesResult, execFetchTables] = useFetchTablesQuery({
+    variables: { id: selectedDataSourceId },
+    pause: !selectedDataSourceId,
+    requestPolicy: "cache-and-network",
+  });
+
+  useEffect(() => {
+    if (selectedDataSourceId) {
+      execFetchTables();
+    }
+  }, [selectedDataSourceId, execFetchTables]);
+
+  const schema =
+    tablesResult.data?.fetch_tables?.schema ||
+    (selectedDataSourceId === initialDataSource.id
+      ? initialSchemaData
+      : undefined);
+
+  const isSchemaLoading = tablesResult.fetching && !schema;
+
   const [step, setStep] = useState<SmartGenStep>("select");
   const [targetBranchId, setTargetBranchId] = useState(branchId);
   const [lockedBranchId, setLockedBranchId] = useState<string | null>(null);
@@ -913,6 +972,16 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
   const abortRef = useRef<AbortController | null>(null);
 
   const [smartGenResult, execSmartGen] = useSmartGenDataSchemasMutation();
+
+  const handleDataSourceSelect = useCallback((id: string) => {
+    setSelectedDataSourceId(id);
+    setSelectedSchema("");
+    setSelectedTable("");
+    setFilters([]);
+    setError(null);
+    setLockedBranchId(null);
+    setSaveToBranchId("");
+  }, []);
 
   useEffect(() => {
     setTargetBranchId(branchId);
@@ -1266,7 +1335,17 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
 
   const saveBranch = saveToBranchId || lockedBranchId || targetBranchId;
 
-  const isTableOptionsLoading = !schema || tableOptions.length === 0;
+  const isTableOptionsLoading =
+    isSchemaLoading || !schema || tableOptions.length === 0;
+
+  const dataSourceOptions = useMemo(
+    () =>
+      availableSources.map((ds) => ({
+        value: ds.id!,
+        label: ds.name,
+      })),
+    [availableSources]
+  );
 
   const selectedTableValue = useMemo(() => {
     if (!selectedSchema || !selectedTable) return undefined;
@@ -1488,9 +1567,28 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
         />
       )}
 
-      {/* Step 1: Table Selection */}
+      {/* Step 1: Data Source + Table Selection */}
       {step === "select" && (
         <>
+          <div className={styles.tableSelect}>
+            <Title level={5}>Select a data source</Title>
+            <Select
+              showSearch
+              placeholder="Select a data source..."
+              style={{ width: "100%" }}
+              size="large"
+              value={selectedDataSourceId || undefined}
+              onChange={handleDataSourceSelect}
+              filterOption={(input, option) =>
+                (option?.label ?? "")
+                  .toString()
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              options={dataSourceOptions}
+            />
+          </div>
+
           <div className={styles.tableSelect}>
             <Title level={5}>Select a table</Title>
             <Select
@@ -1498,7 +1596,7 @@ const SmartGeneration: FC<SmartGenerationProps> = ({
               placeholder="Search for a table..."
               style={{ width: "100%" }}
               size="large"
-              disabled={isTableOptionsLoading}
+              disabled={!selectedDataSourceId || isTableOptionsLoading}
               loading={isTableOptionsLoading}
               value={selectedTableValue}
               onChange={handleTableSelect}

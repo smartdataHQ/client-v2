@@ -1,17 +1,23 @@
 .card {
-  height: 280px;
+  display: flex;
+  flex-direction: column;
+  height: 320px;
+  background: #fafafa;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: none !important;
 }
 
 .closeButton {
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .tabBtn {
   position: relative;
-  color: black;
+  color: #1f1f1f;
   font-weight: 600;
   cursor: pointer;
+
   &::after {
     position: absolute;
     bottom: -16px;
@@ -27,51 +33,139 @@
 
 .header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 12px 14px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 14px 12px 12px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .body {
-  height: 240px;
-  padding: 16px 0;
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
   overflow-y: auto;
 }
 
-.errorItem {
-  padding: 2px 8px !important;
-  font-size: 12px;
-  font-family: monospace;
-  align-items: flex-start !important;
+.errorList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.errorCard {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #ffccc7;
+  border-left: 3px solid #ff4d4f;
+  border-radius: 6px;
+}
+
+.clickable {
+  cursor: pointer;
+
+  &:hover {
+    background: #fff8f7;
+  }
+}
+
+.errorCardIcon {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.errorCardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: 6px;
+  min-width: 0;
+}
+
+.errorMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.cubeName {
+  color: #1f1f1f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fieldPath {
+  padding: 1px 6px;
+  color: #a8071a;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #fff1f0;
+  border-radius: 4px;
+}
+
+.lineRef {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.errorMessage {
+  color: #262626;
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.allowedBlock {
+  margin-top: 2px;
+}
+
+.allowedLabel {
+  margin-bottom: 6px;
+  color: #8c8c8c;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.allowedList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.allowedChip {
+  padding: 2px 8px;
+  color: #434343;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 999px;
 }
 
 .errorIcon {
   color: #ff4d4f;
-  margin-top: 2px;
+  font-size: 14px;
 }
 
 .warningIcon {
   color: #faad14;
-  margin-top: 2px;
-}
-
-.clickableLine {
-  cursor: pointer;
-  &:hover {
-    text-decoration: underline;
-  }
+  font-size: 14px;
 }
 
 .warningCount {
   margin-left: 8px;
-  font-size: 11px;
   color: #999;
+  font-size: 11px;
 }
 
 .noErrors {
   padding: 12px;
   color: #999;
-  font-size: 12px;
+  font-size: 13px;
 }

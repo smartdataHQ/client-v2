@@ -1,6 +1,10 @@
-import { Col, Row, Space, Tooltip } from "antd";
+import { Col, Modal, Row, Space, Tooltip } from "antd";
 import Scrollbar from "react-custom-scrollbars";
-import { CloseOutlined, SyncOutlined } from "@ant-design/icons";
+import {
+  CloseOutlined,
+  InfoCircleOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
 import { Editor } from "@monaco-editor/react";
 import { useTranslation } from "react-i18next";
 import { useResponsive, useSize, useTrackedEffect } from "ahooks";
@@ -14,7 +18,9 @@ import Console from "@/components/Console";
 import type { ConsoleError } from "@/components/Console";
 import { MONACO_OPTIONS } from "@/utils/constants/monaco";
 import type { Dataschema } from "@/types/dataschema";
+import type { Member } from "@/types/team";
 import equals from "@/utils/helpers/equals";
+import formatTime from "@/utils/helpers/formatTime";
 import { createCompletionProvider } from "@/utils/cubejs-language/completionProvider";
 import { createDiagnosticProvider } from "@/utils/cubejs-language/diagnosticProvider";
 import { createHoverProvider } from "@/utils/cubejs-language/hoverProvider";
@@ -23,6 +29,7 @@ import { parseYamlDocument } from "@/utils/cubejs-language/yamlParser";
 import { parseJsDocument } from "@/utils/cubejs-language/jsParser";
 import { CubeRegistry } from "@/utils/cubejs-language/registry";
 import { isSmartGenerated, parseProvenance } from "@/utils/provenanceParser";
+import CurrentUserStore from "@/stores/CurrentUserStore";
 
 import SaveIcon from "@/assets/save.svg";
 
@@ -32,6 +39,29 @@ import styles from "./index.module.less";
 
 import type { MergeStrategy } from "./RegenerateModal";
 import type { FC } from "react";
+
+const resolveSavedBy = (
+  schema: Dataschema | undefined,
+  members: Member[] | undefined,
+  currentUserId?: string,
+  currentUserName?: string | null
+): string => {
+  if (!schema) return "—";
+
+  const fromRelation = schema.user?.display_name?.trim();
+  if (fromRelation) return fromRelation;
+
+  const member = members?.find((m) => m.user_id === schema.user_id);
+  const fromMember = member?.displayName?.trim() || member?.email?.trim() || "";
+  if (fromMember) return fromMember;
+
+  if (schema.user_id && schema.user_id === currentUserId) {
+    const self = currentUserName?.trim();
+    if (self) return self;
+  }
+
+  return "—";
+};
 
 interface CodeEditorProps {
   schemas?: Dataschema[];
@@ -53,6 +83,8 @@ interface CodeEditorProps {
   validationError: string | ConsoleError[];
   cubeRegistry?: CubeRegistry;
   onRefreshRegistry?: () => void;
+  branchName?: string;
+  versionNumber?: number;
 }
 
 const languages = {
@@ -76,8 +108,11 @@ const CodeEditor: FC<CodeEditorProps> = ({
   validationError,
   cubeRegistry,
   onRefreshRegistry,
+  branchName,
+  versionNumber,
 }) => {
   const { t } = useTranslation(["models", "common"]);
+  const { teamData, currentUser } = CurrentUserStore();
   const pageHeader = useRef(null);
   const editorHeader = useRef(null);
   const completionDisposableRef = useRef<any>(null);
@@ -95,6 +130,7 @@ const CodeEditor: FC<CodeEditorProps> = ({
   );
   const [showRegenerateModal, setShowRegenerateModal] =
     useState<boolean>(false);
+  const [showInfoModal, setShowInfoModal] = useState<boolean>(false);
 
   // Create a default registry if none provided
   const registryRef = useRef<CubeRegistry>(cubeRegistry ?? new CubeRegistry());
@@ -587,6 +623,18 @@ const CodeEditor: FC<CodeEditorProps> = ({
               onClick={() => onTabChange(files[name])}
             >
               {files[name].name} {files[name].code !== content?.[name] && "*"}
+              {active === name && (
+                <Tooltip title="Model info">
+                  <InfoCircleOutlined
+                    className={styles.infoIcon}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowInfoModal(true);
+                    }}
+                  />
+                </Tooltip>
+              )}
               <Tooltip title={t("common:words.close")}>
                 <CloseOutlined
                   className={styles.closeIcon}
@@ -704,6 +752,60 @@ const CodeEditor: FC<CodeEditorProps> = ({
               </div>
             )}
           </div>
+          <Modal
+            title="Model info"
+            open={showInfoModal}
+            onCancel={() => setShowInfoModal(false)}
+            footer={null}
+            destroyOnClose
+          >
+            {files[active] && (
+              <dl className={styles.infoList}>
+                <dt>Name</dt>
+                <dd>{files[active].name}</dd>
+
+                <dt>Branch</dt>
+                <dd>{branchName || "—"}</dd>
+
+                <dt>Version</dt>
+                <dd>
+                  {typeof versionNumber === "number" ? versionNumber : "—"}
+                </dd>
+
+                <dt>Saved by</dt>
+                <dd>
+                  {resolveSavedBy(
+                    files[active],
+                    teamData?.members,
+                    currentUser?.id,
+                    currentUser?.displayName || currentUser?.email
+                  )}
+                </dd>
+
+                <dt>Datasource</dt>
+                <dd>{files[active].datasource?.name || "—"}</dd>
+
+                <dt>Created at</dt>
+                <dd>
+                  {files[active].created_at
+                    ? formatTime(files[active].created_at)
+                    : "—"}
+                </dd>
+
+                <dt>Updated at</dt>
+                <dd>
+                  {files[active].updated_at
+                    ? formatTime(files[active].updated_at)
+                    : "—"}
+                </dd>
+
+                <dt>Checksum</dt>
+                <dd className={styles.infoMono}>
+                  {files[active].checksum || "—"}
+                </dd>
+              </dl>
+            )}
+          </Modal>
           <RegenerateModal
             visible={showRegenerateModal}
             onCancel={() => setShowRegenerateModal(false)}

@@ -21,7 +21,9 @@ interface ExploreCubesProps {
     toQuery?: (member: CubeMember) => any
   ) => {
     add: (member: CubeMember) => void;
+    addMany: (members: CubeMember[]) => void;
     remove: (member: CubeMember) => void;
+    removeMany: (members: CubeMember[]) => void;
     update: (member: CubeMember, newValue: any) => void;
   };
   availableQueryMembers: Record<

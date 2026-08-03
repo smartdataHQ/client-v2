@@ -276,6 +276,7 @@ export default ({ meta = [], explorationData, rawSql }: Props) => {
       setOffset,
       setPage,
       setOrderBy,
+      doReset,
     },
     settings,
     dispatchSettings,

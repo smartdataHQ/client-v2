@@ -69,24 +69,15 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
   const { teamData } = CurrentUserStore();
   const [, setLocation] = useLocation();
 
-  const SMART_GEN_TABLES = ["semantic_events", "data_points", "entities"];
-
-  const onSmartGenerate = useCallback(
-    (schemaName: string, tableName: string) => {
-      if (!editId || !teamData?.dataSources) return;
-      const ds = teamData.dataSources.find((d) => d.id === editId);
-      const activeBranch = ds?.branches?.find(
-        (b) => b.status === Branch_Statuses_Enum.Active
-      );
-      if (!activeBranch) return;
-      const schemaParam = encodeURIComponent(schemaName);
-      const tableParam = encodeURIComponent(tableName);
-      setLocation(
-        `${MODELS}/${editId}/${activeBranch.id}/smartgen?schema=${schemaParam}&table=${tableParam}`
-      );
-    },
-    [editId, teamData, setLocation]
-  );
+  const onSmartGenerate = useCallback(() => {
+    if (!editId || !teamData?.dataSources) return;
+    const ds = teamData.dataSources.find((d) => d.id === editId);
+    const activeBranch = ds?.branches?.find(
+      (b) => b.status === Branch_Statuses_Enum.Active
+    );
+    if (!activeBranch) return;
+    setLocation(`${MODELS}/${editId}/${activeBranch.id}/smartgen`);
+  }, [editId, teamData, setLocation]);
 
   const onGoBack = () => onChangeStep?.(step - 1) || setStep(step - 1);
   const onGoForward = () => onChangeStep?.(step + 1) || setStep(step + 1);
@@ -157,7 +148,6 @@ const DataSourceFormBody: FC<DataSourceFormBodyProps> = ({
           onSkip={onSkip || onGoForward}
           loading={loading}
           initialValue={formState?.step2 || formData?.step2 || {}}
-          smartGenTables={SMART_GEN_TABLES}
           onSmartGenerate={onSmartGenerate}
         />
       );
