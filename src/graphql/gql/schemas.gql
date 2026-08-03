@@ -45,6 +45,14 @@ query AllDataSchemas(
         created_at
         updated_at
         datasource_id
+        user_id
+        checksum
+        user {
+          display_name
+        }
+        datasource {
+          name
+        }
       }
     }
   }

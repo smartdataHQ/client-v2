@@ -12782,6 +12782,10 @@ export type AllDataSchemasQuery = {
         created_at: any;
         updated_at: any;
         datasource_id: any;
+        user_id?: any;
+        checksum?: string | null;
+        user?: { __typename?: "users"; display_name?: string | null } | null;
+        datasource?: { __typename?: "datasources"; name: string } | null;
       }>;
     }>;
   }>;
@@ -12954,6 +12958,8 @@ export type VersionByBranchIdQuery = {
       name: string;
       code: string;
       checksum?: string | null;
+      user?: { __typename?: "users"; display_name?: string | null } | null;
+      datasource?: { __typename?: "datasources"; name: string } | null;
     }>;
   }>;
   versions_aggregate: {
@@ -12975,6 +12981,7 @@ export type CurrentVersionQuery = {
     __typename?: "versions";
     id: any;
     checksum: string;
+    user?: { __typename?: "users"; display_name?: string | null } | null;
     dataschemas: Array<{
       __typename?: "dataschemas";
       created_at: any;
@@ -12985,6 +12992,8 @@ export type CurrentVersionQuery = {
       name: string;
       code: string;
       checksum?: string | null;
+      user?: { __typename?: "users"; display_name?: string | null } | null;
+      datasource?: { __typename?: "datasources"; name: string } | null;
     }>;
   }>;
 };
@@ -14430,6 +14439,14 @@ export const AllDataSchemasDocument = gql`
           created_at
           updated_at
           datasource_id
+          user_id
+          checksum
+          user {
+            display_name
+          }
+          datasource {
+            name
+          }
         }
       }
     }
@@ -14681,6 +14698,12 @@ export const VersionByBranchIdDocument = gql`
         name
         code
         checksum
+        user {
+          display_name
+        }
+        datasource {
+          name
+        }
       }
     }
     versions_aggregate(where: { branch_id: { _eq: $branch_id } }) {
@@ -14708,6 +14731,9 @@ export const CurrentVersionDocument = gql`
     ) {
       id
       checksum
+      user {
+        display_name
+      }
       dataschemas(order_by: { name: asc }) {
         created_at
         updated_at
@@ -14717,6 +14743,12 @@ export const CurrentVersionDocument = gql`
         name
         code
         checksum
+        user {
+          display_name
+        }
+        datasource {
+          name
+        }
       }
     }
   }

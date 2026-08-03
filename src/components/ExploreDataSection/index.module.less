@@ -121,12 +121,40 @@
   left: 20px;
 }
 
+.runActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.queryTime {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .run {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
   background: #4a7faa;
+}
+
+.reset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  color: #fff;
+  background: #4a7faa;
+  border-color: #4a7faa;
+
+  &:hover,
+  &:focus {
+    color: #fff !important;
+    background: #3d6d93 !important;
+    border-color: #3d6d93 !important;
+  }
 }
 
 .buttonGroup {
@@ -224,7 +252,19 @@
   margin-top: calc(5%);
 }
 
+.sqlHeaderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .sqlHeader {
   font-weight: 700;
   font-size: 14px;
+}
+
+.sqlCopy {
+  display: inline-flex;
+  align-items: center;
 }

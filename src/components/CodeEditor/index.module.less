@@ -114,6 +114,47 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+.infoBtn {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 16px;
+
+  &:hover {
+    color: #4a7faa;
+  }
+}
+
+.infoIcon {
+  margin-left: 6px;
+  color: #5a7a96;
+  font-size: 12px !important;
+
+  &:hover {
+    color: #3d6a95;
+  }
+}
+
+.infoList {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 8px 16px;
+  margin: 0;
+
+  dt {
+    color: rgba(0, 0, 0, 0.45);
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    word-break: break-all;
+  }
+}
+
+.infoMono {
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+}
+
 .editorControls {
   margin-bottom: 16px;
   padding: 0 16px;

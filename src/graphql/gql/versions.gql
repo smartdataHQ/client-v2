@@ -27,6 +27,12 @@ query versionByBranchId($branch_id: uuid!, $limit: Int, $offset: Int) {
       name
       code
       checksum
+      user {
+        display_name
+      }
+      datasource {
+        name
+      }
     }
   }
   versions_aggregate(where: { branch_id: { _eq: $branch_id } }) {
@@ -45,6 +51,9 @@ query CurrentVersion($branch_id: uuid!) {
   ) {
     id
     checksum
+    user {
+      display_name
+    }
     dataschemas(order_by: { name: asc }) {
       created_at
       updated_at
@@ -54,6 +63,12 @@ query CurrentVersion($branch_id: uuid!) {
       name
       code
       checksum
+      user {
+        display_name
+      }
+      datasource {
+        name
+      }
     }
   }
 }
