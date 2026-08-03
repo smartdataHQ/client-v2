@@ -80,3 +80,22 @@ subscription VersionsCount($branch_id: uuid!) {
     }
   }
 }
+
+query FirstDataschemaAppearance($branch_id: uuid!, $name: String!) {
+  versions(
+    where: {
+      branch_id: { _eq: $branch_id }
+      dataschemas: { name: { _eq: $name } }
+    }
+    order_by: { created_at: asc }
+    limit: 1
+  ) {
+    dataschemas(where: { name: { _eq: $name } }, limit: 1) {
+      created_at
+      user_id
+      user {
+        display_name
+      }
+    }
+  }
+}

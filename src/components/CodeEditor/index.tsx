@@ -10,6 +10,8 @@ import { useTranslation } from "react-i18next";
 import { useResponsive, useSize, useTrackedEffect } from "ahooks";
 import moment from "moment";
 import cn from "classnames";
+import { useQuery } from "urql";
+import gql from "graphql-tag";
 
 import Button from "@/components/Button";
 import NoModels from "@/components/NoModels";
@@ -40,8 +42,34 @@ import styles from "./index.module.less";
 import type { MergeStrategy } from "./RegenerateModal";
 import type { FC } from "react";
 
-const resolveSavedBy = (
-  schema: Dataschema | undefined,
+const FirstDataschemaAppearanceDocument = gql`
+  query FirstDataschemaAppearance($branch_id: uuid!, $name: String!) {
+    versions(
+      where: {
+        branch_id: { _eq: $branch_id }
+        dataschemas: { name: { _eq: $name } }
+      }
+      order_by: { created_at: asc }
+      limit: 1
+    ) {
+      dataschemas(where: { name: { _eq: $name } }, limit: 1) {
+        created_at
+        user_id
+        user {
+          display_name
+        }
+      }
+    }
+  }
+`;
+
+type SchemaUserFields = {
+  user_id?: string | null;
+  user?: { display_name?: string | null } | null;
+};
+
+const resolveUserName = (
+  schema: SchemaUserFields | undefined,
   members: Member[] | undefined,
   currentUserId?: string,
   currentUserName?: string | null
@@ -61,6 +89,11 @@ const resolveSavedBy = (
   }
 
   return "—";
+};
+
+const formatTimestampWithRelative = (timestamp?: string | null): string => {
+  if (!timestamp) return "—";
+  return `${formatTime(timestamp)} (${moment(timestamp).fromNow()})`;
 };
 
 interface CodeEditorProps {
@@ -83,6 +116,7 @@ interface CodeEditorProps {
   validationError: string | ConsoleError[];
   cubeRegistry?: CubeRegistry;
   onRefreshRegistry?: () => void;
+  branchId?: string;
   branchName?: string;
   versionNumber?: number;
 }
@@ -108,6 +142,7 @@ const CodeEditor: FC<CodeEditorProps> = ({
   validationError,
   cubeRegistry,
   onRefreshRegistry,
+  branchId,
   branchName,
   versionNumber,
 }) => {
@@ -131,6 +166,17 @@ const CodeEditor: FC<CodeEditorProps> = ({
   const [showRegenerateModal, setShowRegenerateModal] =
     useState<boolean>(false);
   const [showInfoModal, setShowInfoModal] = useState<boolean>(false);
+  const activeFileName = active && active !== "sqlrunner" ? active : null;
+  const [firstAppearance] = useQuery({
+    query: FirstDataschemaAppearanceDocument,
+    variables: {
+      branch_id: branchId || "",
+      name: activeFileName || "",
+    },
+    pause: !showInfoModal || !branchId || !activeFileName,
+  });
+  const firstSchema =
+    firstAppearance.data?.versions?.[0]?.dataschemas?.[0] || undefined;
 
   // Create a default registry if none provided
   const registryRef = useRef<CubeRegistry>(cubeRegistry ?? new CubeRegistry());
@@ -772,10 +818,20 @@ const CodeEditor: FC<CodeEditorProps> = ({
                   {typeof versionNumber === "number" ? versionNumber : "—"}
                 </dd>
 
-                <dt>Saved by</dt>
+                <dt>Last saved by</dt>
                 <dd>
-                  {resolveSavedBy(
+                  {resolveUserName(
                     files[active],
+                    teamData?.members,
+                    currentUser?.id,
+                    currentUser?.displayName || currentUser?.email
+                  )}
+                </dd>
+
+                <dt>Created by</dt>
+                <dd>
+                  {resolveUserName(
+                    firstSchema || files[active],
                     teamData?.members,
                     currentUser?.id,
                     currentUser?.displayName || currentUser?.email
@@ -787,17 +843,13 @@ const CodeEditor: FC<CodeEditorProps> = ({
 
                 <dt>Created at</dt>
                 <dd>
-                  {files[active].created_at
-                    ? formatTime(files[active].created_at)
-                    : "—"}
+                  {formatTimestampWithRelative(
+                    firstSchema?.created_at || files[active].created_at
+                  )}
                 </dd>
 
                 <dt>Updated at</dt>
-                <dd>
-                  {files[active].updated_at
-                    ? formatTime(files[active].updated_at)
-                    : "—"}
-                </dd>
+                <dd>{formatTimestampWithRelative(files[active].updated_at)}</dd>
 
                 <dt>Checksum</dt>
                 <dd className={styles.infoMono}>

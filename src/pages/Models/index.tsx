@@ -297,6 +297,7 @@ export const Models: React.FC<ModelsProps> = ({
                 cubeRegistry={cubeRegistry}
                 onRefreshRegistry={onRefreshRegistry}
                 branchName={currentBranch?.name}
+                branchId={currentBranch?.id}
                 versionNumber={versionsCount}
               />
             </div>
