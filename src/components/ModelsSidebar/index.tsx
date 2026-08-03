@@ -1,5 +1,5 @@
 import { Col, Row, Space } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import cn from "classnames";
 
@@ -14,7 +14,6 @@ import VersionPreview from "@/components/VersionPreview";
 import BranchSelection from "@/components/BranchSelection";
 import type { Branch, DataSourceInfo } from "@/types/dataSource";
 import type { Dataschema } from "@/types/dataschema";
-import { isSmartGenerated } from "@/utils/provenanceParser";
 
 import TrashColoredIcon from "@/assets/trash-colored.svg";
 import VerticalDots from "@/assets/dots-vertical.svg";
@@ -52,7 +51,6 @@ export interface ModelsSidebarProps {
   onDataSourceChange: (dataSource: DataSourceInfo | null) => void;
   versionsCount?: number;
   onVersionsOpen?: () => void;
-  onReprofile?: (schema: Dataschema) => void;
 }
 
 const icons = {
@@ -82,7 +80,6 @@ const ModelsSidebar: FC<ModelsSidebarProps> = ({
   dataSourceId,
   versionsCount,
   onVersionsOpen,
-  onReprofile,
 }) => {
   const { t } = useTranslation(["models", "common"]);
 
@@ -221,24 +218,6 @@ const ModelsSidebar: FC<ModelsSidebarProps> = ({
                         align="center"
                         size={8}
                       >
-                        {onReprofile && isSmartGenerated(f.code || "") && (
-                          <button
-                            className={styles.fileControl}
-                            title="Re-profile"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onReprofile(f);
-                            }}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              padding: 0,
-                            }}
-                          >
-                            <ReloadOutlined style={{ fontSize: 12 }} />
-                          </button>
-                        )}
                         <PopoverButton
                           className={styles.edit}
                           trigger={["click"]}
