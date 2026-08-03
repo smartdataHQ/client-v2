@@ -1,4 +1,5 @@
 import { Col, Collapse, Empty, Form, Row, Spin, Typography } from "antd";
+import { ThunderboltOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import cn from "classnames";
 import { useResponsive } from "ahooks";
@@ -36,8 +37,7 @@ interface DataModelGenerationProps {
   initialValue?: DynamicForm;
   loading?: boolean;
   resetOnSubmit?: boolean;
-  smartGenTables?: string[];
-  onSmartGenerate?: (schemaName: string, tableName: string) => void;
+  onSmartGenerate?: () => void;
 }
 
 const options = [
@@ -56,7 +56,6 @@ const DataModelGeneration: FC<DataModelGenerationProps> = ({
   initialValue = {},
   loading = false,
   resetOnSubmit = false,
-  smartGenTables = [],
   onSmartGenerate,
 }) => {
   const { t } = useTranslation(["dataModelGeneration", "common"]);
@@ -113,12 +112,24 @@ const DataModelGeneration: FC<DataModelGenerationProps> = ({
     <div className={styles.wrapper}>
       <div className={styles.head}>
         <div className={styles.dataSource}>
-          {"icon" in dataSource && (
-            <div className={styles.iconWrapper}>{dataSource.icon}</div>
+          <div className={styles.dataSourceInfo}>
+            {"icon" in dataSource && (
+              <div className={styles.iconWrapper}>{dataSource.icon}</div>
+            )}
+            <Title className={styles.title} level={3}>
+              {dataSource.name}
+            </Title>
+          </div>
+          {onSmartGenerate && (
+            <Button
+              className={styles.smartGenerate}
+              type="primary"
+              icon={<ThunderboltOutlined />}
+              onClick={onSmartGenerate}
+            >
+              Smart Generate
+            </Button>
           )}
-          <Title className={styles.title} level={3}>
-            {dataSource.name}
-          </Title>
         </div>
         <Text>{t("text")}</Text>
         <Title level={5}>{t("title")}</Title>
@@ -154,8 +165,6 @@ const DataModelGeneration: FC<DataModelGenerationProps> = ({
                         schema={filteredSchema}
                         path={s}
                         initialValue={initialValue}
-                        smartGenTables={smartGenTables}
-                        onSmartGenerate={onSmartGenerate}
                       />
                     </Panel>
                   );

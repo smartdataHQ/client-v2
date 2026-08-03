@@ -17,74 +17,120 @@ const defaultFilterValues = {
   number: {
     operator: "set",
   },
-  boolean: {
-    operator: "equals",
-    values: ["true"],
-  },
 };
 
 interface Action {
   type:
     | "add"
-    | "update"
+    | "addMany"
     | "update"
     | "setLimit"
     | "setOffset"
     | "setPage"
     | "setOrder"
     | "remove"
+    | "removeMany"
     | "reset";
   [key: string]: any;
 }
+
+const applyAdd = (
+  state: PlaygroundState,
+  action: { memberType?: string; value: any; operatorType?: string }
+): PlaygroundState => {
+  let { memberType } = action;
+  let { value } = action;
+
+  if (memberType !== "filters") {
+    const [memberName, granularity = null] = action?.value?.split(
+      /\+/
+    ) as string[];
+
+    if (granularity) {
+      memberType = "timeDimensions";
+      value = {
+        dimension: memberName,
+        granularity,
+      };
+    }
+
+    const slice = state[
+      memberType as keyof PlaygroundState
+    ] as unknown as CubeMember[];
+
+    const isMemberExists = !!slice.find(
+      (member) =>
+        member.dimension?.name === memberName &&
+        member.granularity === granularity
+    );
+
+    if (isMemberExists) {
+      return state;
+    }
+  } else {
+    value = {
+      ...action.value,
+      ...defaultFilterValues[
+        action.operatorType as keyof typeof defaultFilterValues
+      ],
+    };
+  }
+
+  const elementsCount = getOr([], memberType, state).length;
+
+  return set([memberType, elementsCount], value, state);
+};
+
+const applyRemove = (
+  state: PlaygroundState,
+  action: { memberType?: string; value: any; index?: number }
+): PlaygroundState => {
+  let { memberType } = action;
+  let { index } = action;
+  const { value } = action;
+
+  if (memberType !== "filters") {
+    const [memberName, granularity = null] = value?.split(/\+/);
+
+    if (granularity) {
+      memberType = "timeDimensions";
+      const slice = state[memberType as keyof PlaygroundState] as CubeMember[];
+
+      index = slice.findIndex(
+        (member: CubeMember) =>
+          member.dimension === memberName && member.granularity === granularity
+      );
+    } else if (index === undefined || index === null) {
+      const slice = getOr([], memberType, state) as unknown[];
+      index = slice.findIndex((member) => member === value);
+    }
+  }
+
+  if (index === undefined || index === null || index < 0) {
+    return state;
+  }
+
+  return remove([memberType, index], state);
+};
+
 const reducer: Reducer<PlaygroundState, Action> = (
   state: PlaygroundState,
   action: Action
 ) => {
-  let { memberType } = action;
-
   if (action.type === "add") {
-    let { value } = action;
+    return applyAdd(state, action);
+  }
 
-    if (memberType !== "filters") {
-      const [memberName, granularity = null] = action?.value?.split(
-        /\+/
-      ) as string[];
-
-      if (granularity) {
-        memberType = "timeDimensions";
-        value = {
-          dimension: memberName,
-          granularity,
-        };
-      }
-
-      const slice = state[
-        memberType as keyof PlaygroundState
-      ] as unknown as CubeMember[];
-
-      const isMemberExists = !!slice.find(
-        (member) =>
-          member.dimension?.name === memberName &&
-          member.granularity === granularity
-      );
-
-      if (isMemberExists) {
-        return state;
-      }
-    } else {
-      const filterDefaults =
-        defaultFilterValues[
-          action.operatorType as keyof typeof defaultFilterValues
-        ] ?? defaultFilterValues.string;
-      value = {
-        ...action.value,
-        ...filterDefaults,
-      };
-    }
-
-    const elementsCount = getOr([], memberType, state).length;
-
-    return set([memberType, elementsCount], value, state);
+  if (action.type === "addMany") {
+    return (action.values || []).reduce(
+      (acc: PlaygroundState, value: any) =>
+        applyAdd(acc, {
+          memberType: action.memberType,
+          value,
+          operatorType: action.operatorType,
+        }),
+      state
+    );
   }
 
   if (action.type === "update") {
@@ -116,27 +162,20 @@ const reducer: Reducer<PlaygroundState, Action> = (
   }
 
   if (action.type === "remove") {
-    let { index } = action;
-    const { value } = action;
+    return applyRemove(state, action);
+  }
 
-    if (memberType !== "filters") {
-      const [memberName, granularity = null] = value?.split(/\+/);
-
-      if (granularity) {
-        memberType = "timeDimensions";
-        const slice = state[
-          memberType as keyof PlaygroundState
-        ] as CubeMember[];
-
-        index = slice.findIndex(
-          (member: CubeMember) =>
-            member.dimension === memberName &&
-            member.granularity === granularity
-        );
-      }
-    }
-
-    return remove([memberType, index], state);
+  if (action.type === "removeMany") {
+    return (action.values || []).reduce(
+      (acc: PlaygroundState, item: { value: any; index?: number }) =>
+        applyRemove(acc, {
+          memberType: action.memberType,
+          value: item.value,
+          // Resolve by name on each step so earlier removals do not shift indices
+          index: undefined,
+        }),
+      state
+    );
   }
 
   if (action.type === "reset") {
@@ -158,7 +197,7 @@ export const queryState: PlaygroundState = {
   ...queryBaseMembers,
   order: [],
   timezone: "UTC",
-  limit: 100,
+  limit: 1000,
   offset: 0,
 };
 
@@ -183,12 +222,27 @@ const useAnalyticsQuery = () => {
           value: toQuery(member),
           operatorType: getOperatorType(member),
         }),
+      addMany: (members: CubeMember[]) =>
+        dispatch({
+          type: "addMany",
+          memberType,
+          values: members.map(toQuery),
+        }),
       remove: (member: CubeMember) =>
         dispatch({
           type: "remove",
           memberType,
           value: toQuery(member),
           index: member.index,
+        }),
+      removeMany: (members: CubeMember[]) =>
+        dispatch({
+          type: "removeMany",
+          memberType,
+          values: members.map((member) => ({
+            value: toQuery(member),
+            index: member.index,
+          })),
         }),
       update: (member: CubeMember, newValue: any) =>
         dispatch({

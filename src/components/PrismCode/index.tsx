@@ -66,11 +66,7 @@ const PrismCode: FC<PrismCodeProps> = ({ code, lang = "sql", style }) => {
   return (
     <div className={s.container}>
       <pre style={style}>
-        <Text
-          code
-          copyable={{ text: code }}
-          style={{ background: "none", border: "none" }}
-        >
+        <Text code style={{ background: "none", border: "none" }}>
           <div
             style={{ display: "inline", lineHeight: 1 }}
             dangerouslySetInnerHTML={{ __html: htmlContent }}

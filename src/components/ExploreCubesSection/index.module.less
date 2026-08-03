@@ -1,12 +1,37 @@
 .root {
   background: #f9f9f9;
+  white-space: normal;
+  overflow: visible;
+}
+
+.categorySection {
+  white-space: normal;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  white-space: normal;
 }
 
 .categoryTitle {
-  display: block;
-  margin-bottom: 8px;
   color: rgba(0, 0, 0, 0.5);
   font-weight: 700;
   font-size: 12px;
   text-transform: uppercase;
+}
+
+.selectAll {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: rgba(0, 0, 0, 0.65);
+
+  :global(.ant-checkbox + span) {
+    padding-inline-end: 0;
+  }
 }

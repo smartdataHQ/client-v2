@@ -1,4 +1,4 @@
-import { Radio, Select, Spin, Col, Form, Row, Space } from "antd";
+import { Radio, Select, Spin, Col, Form, Row, Space, message } from "antd";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import cn from "classnames";
@@ -9,6 +9,7 @@ import InfoBlock from "@/components/InfoBlock";
 import Button from "@/components/Button";
 import AuthTokensStore from "@/stores/AuthTokensStore";
 import validations from "@/utils/helpers/validations";
+import { parseRestBodyToPlaygroundState } from "@/utils/helpers/parseRestBodyToPlaygroundState";
 import type { PlaygroundState } from "@/types/exploration";
 import type { SortBy } from "@/types/sort";
 
@@ -34,6 +35,7 @@ interface RestApiProps {
   dataSourceId: string;
   branchId: string;
   playgroundState: PlaygroundState;
+  onApplyQuery?: (state: PlaygroundState) => void;
 }
 
 interface RestApiState {
@@ -257,6 +259,7 @@ const RestAPI: FC<RestApiProps> = ({
   dataSourceId,
   branchId,
   playgroundState,
+  onApplyQuery,
 }) => {
   const { t } = useTranslation(["explore", "common"], { useSuspense: false });
   const { accessToken, workosAccessToken } = AuthTokensStore();
@@ -376,6 +379,22 @@ const RestAPI: FC<RestApiProps> = ({
 
     setValue("response", responseText);
     setState(defaultState);
+  };
+
+  const onApplyToExplore = () => {
+    if (!onApplyQuery) return;
+
+    try {
+      const nextState = parseRestBodyToPlaygroundState(getValues("json") || "");
+      onApplyQuery(nextState);
+      message.success("Query applied to Explore. Click Run Query to execute.");
+    } catch (e: any) {
+      message.error(
+        e?.message
+          ? `Could not apply query: ${e.message}`
+          : "Could not apply query"
+      );
+    }
   };
 
   useEffect(() => {
@@ -529,9 +548,22 @@ const RestAPI: FC<RestApiProps> = ({
           </Row>
           <Row style={{ width: "100%" }} gutter={10}>
             <Col xs={24} className={styles.textAreaWrapper}>
+              <div className={styles.bodyHeader}>
+                <span className={styles.bodyLabel}>
+                  {t("common:form.labels.body")}
+                </span>
+                {onApplyQuery && (
+                  <Button
+                    size="large"
+                    type="primary"
+                    onClick={onApplyToExplore}
+                  >
+                    {t("data_section.apply_to_explore")}
+                  </Button>
+                )}
+              </div>
               <Input
                 className={styles.input}
-                label={t("common:form.labels.body")}
                 name="json"
                 style={{ height: 300, resize: "vertical" }}
                 fieldType="textarea"
