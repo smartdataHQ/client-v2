@@ -206,14 +206,14 @@ const ModelsSidebar: FC<ModelsSidebarProps> = ({
                   )}
                   onClick={() => onSelectFile(f.name)}
                 >
-                  <Row justify={"space-between"} wrap={false}>
-                    <Col className={styles.file} span={18} title={f.name}>
+                  <Row justify={"space-between"} wrap={false} align="middle">
+                    <Col flex="auto" className={styles.file} title={f.name}>
                       {icons[f.name.split(".")[1] as keyof typeof icons]}{" "}
                       <span className={styles.fileNameText}>{f.name}</span>
                     </Col>
 
                     <Col
-                      span={6}
+                      flex="none"
                       style={{ display: "flex", justifyContent: "end" }}
                     >
                       <Space
