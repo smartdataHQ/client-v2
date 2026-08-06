@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import useAnalyticsQueryMembers from "@/hooks/useAnalyticsQueryMembers";
 import useFormatExport from "@/hooks/useFormatExport";
+import { hasPlaygroundSelection } from "@/hooks/useAnalyticsQuery";
 import Button from "@/components/Button";
 import VirtualTable, { cellRenderer } from "@/components/VirtualTable";
 import PrismCode from "@/components/PrismCode";
@@ -312,7 +313,11 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
             type="default"
             className={s.sqlCopy}
             icon={<CopyIcon />}
-            onClick={() => navigator.clipboard.writeText(rawSql.sql || "")}
+            onClick={() => {
+              navigator.clipboard.writeText(rawSql.sql || "").then(() => {
+                message.success("SQL copied to clipboard");
+              });
+            }}
           >
             Copy
           </Button>
@@ -325,6 +330,8 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
       </>
     );
   }, [empty, queryState, t]);
+
+  const hasSelection = hasPlaygroundSelection(playgroundState);
 
   const RestApi = useMemo(() => {
     if (dataSource?.id && currentBranch?.id) {
@@ -349,11 +356,6 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
     playgroundState,
     updateState,
   ]);
-
-  const handleResetQuery = () => {
-    onResetQuery?.();
-    message.success("Selection cleared");
-  };
 
   const onChange = (values: Partial<DataSchemaFormValues>) => {
     if (values.limit !== limit) {
@@ -386,11 +388,11 @@ const ExploreDataSection: FC<ExploreDataSectionProps> = (props) => {
               {onResetQuery && (
                 <Button
                   className={s.reset}
-                  type="primary"
-                  onClick={handleResetQuery}
-                  disabled={!queryState?.columns?.length || loading}
+                  type="default"
+                  onClick={onResetQuery}
+                  disabled={!hasSelection || loading}
                 >
-                  Reset
+                  Clear selection
                 </Button>
               )}
               {queryTimeMs != null && !loading && (

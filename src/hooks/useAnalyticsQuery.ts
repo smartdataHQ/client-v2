@@ -205,6 +205,13 @@ export const initialState: PlaygroundState = {
   ...queryState,
 };
 
+export const hasPlaygroundSelection = (state: PlaygroundState): boolean =>
+  state.measures.length > 0 ||
+  state.dimensions.length > 0 ||
+  state.filters.length > 0 ||
+  state.timeDimensions.length > 0 ||
+  state.segments.length > 0;
+
 const getName = (member: { name?: string }): any => member.name;
 
 const getOperatorType = (member: CubeMember) =>

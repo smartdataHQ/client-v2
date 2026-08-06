@@ -1,4 +1,11 @@
-import { useMemo, useState, useEffect, useReducer, useCallback } from "react";
+import {
+  useMemo,
+  useState,
+  useEffect,
+  useReducer,
+  useCallback,
+  useRef,
+} from "react";
 import { useDeepCompareEffect } from "ahooks";
 
 import useDataSourceMeta from "@/hooks/useDataSourcesMeta";
@@ -234,6 +241,7 @@ export default ({ meta = [], explorationData, rawSql }: Props) => {
   );
 
   const [isQueryChanged, setChangedStatus] = useState(false);
+  const syncedExplorationIdRef = useRef<string | undefined>();
 
   useEffect(() => {
     const playgroundState = exploration?.playground_state || queryState;
@@ -248,20 +256,43 @@ export default ({ meta = [], explorationData, rawSql }: Props) => {
     }
   }, [isQueryChanged, currPlaygroundState, exploration, selectorDirty]);
 
+  // Hydrate from saved exploration only when opening a (new) exploration — not on
+  // every refetch, so Apply to Explore / local edits are not overwritten by stale DB state.
   useEffect(() => {
+    const id = exploration?.id;
     const newState = exploration?.playground_state;
 
-    if (newState) {
-      doReset(newState as unknown as PlaygroundState);
-      setSelectorDirty(false);
+    if (!id || !newState || syncedExplorationIdRef.current === id) {
+      return;
     }
-  }, [exploration?.playground_state, doReset]);
+
+    doReset(newState as unknown as PlaygroundState);
+    setSelectorDirty(false);
+    syncedExplorationIdRef.current = id;
+  }, [exploration?.id, exploration?.playground_state, doReset]);
 
   useEffect(() => {
     if (!exploration?.id) {
       doReset(initialState);
+      syncedExplorationIdRef.current = undefined;
     }
   }, [exploration?.id, doReset]);
+
+  const clearSelection = useCallback(() => {
+    doReset({
+      measures: [],
+      dimensions: [],
+      filters: [],
+      timeDimensions: [],
+      segments: [],
+      order: [],
+      timezone: "UTC",
+      limit: 1000,
+      offset: 0,
+    });
+    setSelectorValues({});
+    setSelectorDirty(false);
+  }, [doReset]);
 
   return {
     state: explorationState,
@@ -286,5 +317,6 @@ export default ({ meta = [], explorationData, rawSql }: Props) => {
       setSelectorValue,
       selectorFilters,
     },
+    clearSelection,
   };
 };
