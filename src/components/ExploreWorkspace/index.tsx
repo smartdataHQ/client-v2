@@ -1,12 +1,11 @@
-import { Spin } from "antd";
-import { useTranslation } from "react-i18next";
+import { Spin, message } from "antd";
+import { useCallback, useMemo } from "react";
 
 import SidebarLayout from "@/layouts/SidebarLayout";
 import ExploreDataSection from "@/components/ExploreDataSection";
 import ErrorFound from "@/components/ErrorFound";
 import ExploreCubes from "@/components/ExploreCubes";
 import usePlayground, { queryStateKeys } from "@/hooks/usePlayground";
-import { initialState } from "@/hooks/useAnalyticsQuery";
 import useExploreWorkspace from "@/hooks/useExploreWorkspace";
 import useDimensions from "@/hooks/useDimensions";
 import useLocation from "@/hooks/useLocation";
@@ -61,7 +60,6 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
     icon,
   } = props;
 
-  const { t } = useTranslation(["common"]);
   const [location, setLocation] = useLocation();
   const { screenshotMode } = location?.query || {};
   const isScreenshotMode = screenshotMode !== undefined;
@@ -89,6 +87,7 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
     settings,
     dispatchSettings,
     selectors,
+    clearSelection,
   } = usePlayground({
     explorationData,
     meta: meta.data,
@@ -99,6 +98,11 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
     useExploreWorkspace({
       selectedQueryMembers,
     });
+
+  const handleClearSelection = useCallback(() => {
+    clearSelection();
+    message.success("Selection cleared");
+  }, [clearSelection]);
 
   const tableHeight = useMemo(
     () =>
@@ -190,7 +194,7 @@ const ExploreWorkspace: FC<ExploreWorkspaceProps> = (props) => {
       onExec={onRunQuery}
       onQueryChange={onQueryChange}
       onApplyQuery={doReset}
-      onResetQuery={() => doReset(initialState)}
+      onResetQuery={handleClearSelection}
       onOpenModal={onOpenModal}
       disabled={!isQueryChanged}
       state={state}

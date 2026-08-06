@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import cn from "classnames";
 import { useResponsive } from "ahooks";
+import { useEffect } from "react";
 
 import Input from "@/components/Input";
 
@@ -31,9 +32,16 @@ const ExploreSettingsForm: FC<ExploreSettingsFormProps> = ({
   const windowSize = useResponsive();
   const isMobile = windowSize.lg === false;
 
-  const { control, watch } = useForm<DataSchemaFormValues>({
+  const { control, watch, reset } = useForm<DataSchemaFormValues>({
     defaultValues,
   });
+
+  useEffect(() => {
+    reset({
+      limit: defaultValues.limit,
+      offset: defaultValues.offset,
+    });
+  }, [defaultValues.limit, defaultValues.offset, reset]);
 
   useEffect(() => {
     const { unsubscribe } = watch((value) => {
