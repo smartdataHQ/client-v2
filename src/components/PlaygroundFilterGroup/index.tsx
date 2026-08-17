@@ -46,7 +46,7 @@ const FilterGroup: FC<FilterGroupProps> = ({
             size="large"
             suffixIcon={<DoubleArrowIcon />}
           >
-            {m.operators!.map((operator) => (
+            {(m.operators || []).map((operator) => (
               <Select.Option key={operator.name} value={operator.name}>
                 {t(operator.title)}
               </Select.Option>
