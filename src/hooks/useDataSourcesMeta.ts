@@ -85,6 +85,13 @@ class Meta {
   }
 
   resolveMember(memberName: string, memberType: string | string[]) {
+    if (!memberName || typeof memberName !== "string") {
+      return {
+        title: String(memberName ?? ""),
+        error: `Path not found '${memberName}'`,
+      };
+    }
+
     const [cube] = memberName.split(".");
 
     if (!this.cubesMap[cube]) {
@@ -119,6 +126,13 @@ class Meta {
   }
 }
 
+const filterMemberName = (filter: any): string | undefined => {
+  if (typeof filter?.dimension === "string") return filter.dimension;
+  if (typeof filter?.member === "string") return filter.member;
+  if (typeof filter?.dimension?.name === "string") return filter.dimension.name;
+  return undefined;
+};
+
 const enrichPlaygroundMembers = (cubesMetaCls: Meta, playgroundState: any) => {
   const resolveWithIndex = (key: string) =>
     getOr([], key, playgroundState).map((value: string, index: number) => ({
@@ -135,20 +149,24 @@ const enrichPlaygroundMembers = (cubesMetaCls: Meta, playgroundState: any) => {
     })
   );
 
-  const filters = getOr([], "filters", playgroundState).map(
-    (m: any, index: number) => ({
-      ...m,
-      dimension: cubesMetaCls.resolveMember(m.dimension, [
-        "dimensions",
-        "measures",
-      ]),
-      operators: cubesMetaCls.filterOperatorsForMember(m.dimension, [
-        "dimensions",
-        "measures",
-      ]),
-      index,
+  const filters = getOr([], "filters", playgroundState)
+    .map((m: any, index: number) => {
+      const memberName = filterMemberName(m);
+      if (!memberName) return null;
+      return {
+        ...m,
+        dimension: cubesMetaCls.resolveMember(memberName, [
+          "dimensions",
+          "measures",
+        ]),
+        operators: cubesMetaCls.filterOperatorsForMember(memberName, [
+          "dimensions",
+          "measures",
+        ]),
+        index,
+      };
     })
-  );
+    .filter(Boolean);
 
   const enrichedMembers = {
     measures: resolveWithIndex("measures"),
@@ -175,7 +193,10 @@ const updatePlaygroundState = (playgroundState: any, cubesMeta: Meta) => {
         const filteredArray = playgroundState[curKey].filter((m: any) => {
           let resolved: any = false;
           if (curKey === "filters") {
-            resolved = cubesMeta.resolveMember(m.dimension, [
+            if (Array.isArray(m?.or) || Array.isArray(m?.and)) {
+              return true;
+            }
+            resolved = cubesMeta.resolveMember(filterMemberName(m), [
               "dimensions",
               "measures",
             ]);
