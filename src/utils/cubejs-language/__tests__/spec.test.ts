@@ -2,7 +2,7 @@
  * T004: TDD tests for the Cube.js schema spec.
  *
  * Validates the static spec exported from ../spec.ts against known
- * Cube.js v1.6.19 schema requirements.
+ * Cube.js v1.7.30 schema requirements.
  */
 import { describe, it, expect } from "vitest";
 
@@ -24,8 +24,8 @@ function memberType(name: string) {
 // ---------------------------------------------------------------------------
 
 describe("CUBEJS_SPEC_VERSION", () => {
-  it('equals "1.6.19"', () => {
-    expect(CUBEJS_SPEC_VERSION).toBe("1.6.19");
+  it('equals "1.7.30"', () => {
+    expect(CUBEJS_SPEC_VERSION).toBe("1.7.30");
   });
 
   it("matches the spec version", () => {
@@ -67,6 +67,7 @@ describe("cube construct", () => {
       "preAggregations",
       "accessPolicy",
       "hierarchies",
+      "calendar",
     ];
     for (const k of expected) {
       expect(keys).toContain(k);
@@ -102,6 +103,9 @@ describe("view construct", () => {
     expect(view.properties.cubes).toBeDefined();
     expect(view.properties.folders).toBeDefined();
     expect(view.properties.isView).toBeDefined();
+    expect(view.properties.viewGroup).toBeDefined();
+    expect(view.properties.viewGroups).toBeDefined();
+    expect(view.properties.defaultFilters).toBeDefined();
   });
 
   it("cubes property has children with view cube item keys", () => {
@@ -128,11 +132,18 @@ describe("view construct", () => {
 describe("dimension types", () => {
   const dimSpec = memberType("dimensions");
 
-  it("has all 5 dimension types", () => {
+  it("has all 6 dimension types", () => {
     expect(dimSpec.typeValues).toEqual(
-      expect.arrayContaining(["string", "number", "boolean", "time", "geo"])
+      expect.arrayContaining([
+        "string",
+        "number",
+        "boolean",
+        "time",
+        "geo",
+        "switch",
+      ])
     );
-    expect(dimSpec.typeValues).toHaveLength(5);
+    expect(dimSpec.typeValues).toHaveLength(6);
   });
 });
 
@@ -420,10 +431,18 @@ describe("required properties", () => {
 describe("access policy", () => {
   const apChildren = cube.properties.accessPolicy.children!;
 
-  it("has role, memberLevel, rowLevel, conditions", () => {
+  it("has role, group, groups, memberLevel, memberMasking, rowLevel, conditions", () => {
     const keys = Object.keys(apChildren);
     expect(keys).toEqual(
-      expect.arrayContaining(["role", "memberLevel", "rowLevel", "conditions"])
+      expect.arrayContaining([
+        "role",
+        "group",
+        "groups",
+        "memberLevel",
+        "memberMasking",
+        "rowLevel",
+        "conditions",
+      ])
     );
   });
 

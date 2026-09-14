@@ -1,7 +1,7 @@
 /**
- * Static Cube.js v1.6.19 schema specification.
+ * Static Cube.js v1.7.30 schema specification.
  *
- * Extracted from @cubejs-backend/schema-compiler CubeValidator.js.
+ * Extracted from @cubejs-backend/schema-compiler CubeValidator.ts.
  * This is the single source of truth for all valid model properties,
  * used by the language service for completions, hover, and validation.
  */
@@ -18,7 +18,7 @@ import type {
 // Version
 // ---------------------------------------------------------------------------
 
-export const CUBEJS_SPEC_VERSION = "1.6.19";
+export const CUBEJS_SPEC_VERSION = "1.7.30";
 
 // ---------------------------------------------------------------------------
 // Helper: property factory
@@ -251,9 +251,21 @@ const conditionProperties: Record<string, PropertySpec> = {
 };
 
 const accessPolicyProperties: Record<string, PropertySpec> = {
-  role: prop("role", "string", "Role name this policy applies to", {
+  role: prop("role", "string", "Role name this policy applies to (use group)", {
     required: true,
+    deprecated: true,
+    deprecatedBy: "group",
   }),
+  group: prop(
+    "group",
+    "string",
+    "Group name this policy applies to (mutually exclusive with groups)"
+  ),
+  groups: prop(
+    "groups",
+    "array",
+    "Group names this policy applies to (mutually exclusive with group)"
+  ),
   memberLevel: withYamlKey(
     prop(
       "memberLevel",
@@ -264,6 +276,17 @@ const accessPolicyProperties: Record<string, PropertySpec> = {
       }
     ),
     "member_level"
+  ),
+  memberMasking: withYamlKey(
+    prop(
+      "memberMasking",
+      "object",
+      "Member masking policy (requires memberLevel)",
+      {
+        children: memberLevelProperties,
+      }
+    ),
+    "member_masking"
   ),
   rowLevel: withYamlKey(
     prop("rowLevel", "object", "Row-level security filters", {
@@ -319,7 +342,32 @@ const viewFolderItemProperties: Record<string, PropertySpec> = {
   includes: prop(
     "includes",
     "array",
-    'Members to include ("*" for all, or array of member names)'
+    'Members to include ("*" for all, nested folders, or joinPath objects)'
+  ),
+  joinPath: withYamlKey(
+    prop("joinPath", "function", "Join path for a nested folder include"),
+    "join_path"
+  ),
+};
+
+const viewDefaultFilterProperties: Record<string, PropertySpec> = {
+  member: prop(
+    "member",
+    "function",
+    "Member reference for the default filter",
+    {
+      required: true,
+    }
+  ),
+  operator: prop("operator", "enum", "Filter operator", {
+    required: true,
+    values: filterOperators.filter((op) => op !== "measureFilter"),
+  }),
+  values: prop("values", "array", "Filter values"),
+  unless: prop(
+    "unless",
+    "function",
+    "Skip this default filter when the condition is true"
   ),
 };
 
@@ -341,6 +389,7 @@ const granularityProperties: Record<string, PropertySpec> = {
     "Origin point for the granularity alignment"
   ),
   offset: prop("offset", "string", "Offset from the origin for alignment"),
+  sql: prop("sql", "sql", "SQL expression for a custom granularity"),
 };
 
 // ---------------------------------------------------------------------------
@@ -389,7 +438,7 @@ const geoSubProperties: Record<string, PropertySpec> = {
 const formatObjectProperties: Record<string, PropertySpec> = {
   type: prop("type", "enum", "Format type", {
     required: true,
-    values: ["link", "currency", "percent", "number", "id"],
+    values: ["imageUrl", "link", "currency", "percent", "number", "id"],
   }),
   label: prop("label", "string", "Display label for link format"),
 };
@@ -425,7 +474,7 @@ const dimensionProperties: Record<string, PropertySpec> = {
   sql: prop("sql", "sql", "SQL expression for this dimension"),
   type: prop("type", "enum", "Data type of this dimension", {
     required: true,
-    values: ["string", "number", "boolean", "time", "geo"],
+    values: ["string", "number", "boolean", "time", "geo", "switch"],
   }),
   aliases: prop("aliases", "array", "Alternative names for this dimension"),
   fieldType: withYamlKey(
@@ -476,7 +525,7 @@ const dimensionProperties: Record<string, PropertySpec> = {
     "enum",
     "Display format for the dimension value (string or object form)",
     {
-      values: ["link", "currency", "percent", "number", "id"],
+      values: ["imageUrl", "link", "currency", "percent", "number", "id"],
       children: formatObjectProperties,
     }
   ),
@@ -544,6 +593,44 @@ const dimensionProperties: Record<string, PropertySpec> = {
     ),
     "add_group_by"
   ),
+  values: prop("values", "array", "Allowed values for a switch dimension"),
+  timeShift: withYamlKey(
+    prop(
+      "timeShift",
+      "array",
+      "Named time shifts for calendar cube time dimensions",
+      {
+        children: {
+          name: prop("name", "string", "Named time-shift identifier"),
+          interval: prop(
+            "interval",
+            "string",
+            'Shift interval (e.g., "1 year")'
+          ),
+          type: prop("type", "enum", "Shift type", {
+            values: ["prior", "next"],
+          }),
+          sql: prop("sql", "sql", "Custom SQL for this time shift"),
+        },
+      }
+    ),
+    "time_shift"
+  ),
+  filter: prop(
+    "filter",
+    "object",
+    "Multi-stage include/exclude filter for this dimension"
+  ),
+  links: prop("links", "array", "Related links shown for this dimension"),
+  mask: prop("mask", "object", "Masking expression for this dimension"),
+  currency: prop(
+    "currency",
+    "string",
+    "ISO 4217 currency code (number dimensions only)"
+  ),
+  order: prop("order", "enum", "Default sort order", {
+    values: ["asc", "desc"],
+  }),
 };
 
 // ---------------------------------------------------------------------------
@@ -730,6 +817,22 @@ const measureProperties: Record<string, PropertySpec> = {
     }),
     "order_by"
   ),
+  filter: prop(
+    "filter",
+    "object",
+    "Multi-stage include/exclude filter for this measure"
+  ),
+  grain: prop(
+    "grain",
+    "object",
+    "Multi-stage grain include/exclude for this measure"
+  ),
+  currency: prop(
+    "currency",
+    "string",
+    "ISO 4217 currency code (numeric measures only)"
+  ),
+  mask: prop("mask", "object", "Masking expression for this measure"),
 };
 
 // ---------------------------------------------------------------------------
@@ -1150,6 +1253,11 @@ const cubeProperties: Record<string, PropertySpec> = {
     ),
     "sql_table"
   ),
+  calendar: prop(
+    "calendar",
+    "boolean",
+    "Mark this cube as a calendar cube for custom time dimensions"
+  ),
   title: prop("title", "string", "Display title for this cube"),
   sqlAlias: withYamlKey(
     prop(
@@ -1333,6 +1441,25 @@ const viewProperties: Record<string, PropertySpec> = {
       children: viewFolderItemProperties,
     }
   ),
+  viewGroup: withYamlKey(
+    prop("viewGroup", "string", "Single view group this view belongs to"),
+    "view_group"
+  ),
+  viewGroups: withYamlKey(
+    prop("viewGroups", "array", "View groups this view belongs to"),
+    "view_groups"
+  ),
+  defaultFilters: withYamlKey(
+    prop(
+      "defaultFilters",
+      "array",
+      "Filters applied by default when querying this view",
+      {
+        children: viewDefaultFilterProperties,
+      }
+    ),
+    "default_filters"
+  ),
   // Views can also define joins, measures, dimensions, segments, preAggregations
   joins: prop(
     "joins",
@@ -1427,7 +1554,7 @@ const templateVariables: TemplateVariableSpec[] = [
 const dimensionTypeSpec: MemberTypeSpec = {
   name: "dimensions",
   properties: dimensionProperties,
-  typeValues: ["string", "number", "boolean", "time", "geo"],
+  typeValues: ["string", "number", "boolean", "time", "geo", "switch"],
 };
 
 const measureTypeSpec: MemberTypeSpec = {
