@@ -306,7 +306,7 @@ describe("property hover: type in measure", () => {
     expect(info!.content).toContain("`min`");
     expect(info!.content).toContain("`max`");
     expect(info!.content).toContain("`countDistinct`");
-    expect(info!.content).toContain("`runningTotal`");
+    expect(info!.content).not.toContain("`runningTotal`");
     // Should NOT contain dimension-only types like 'geo'
     expect(info!.content).not.toContain("`geo`");
   });

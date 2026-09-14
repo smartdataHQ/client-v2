@@ -221,6 +221,14 @@ const memberLevelProperties: Record<string, PropertySpec> = {
 
 const rowLevelFilterProperties: Record<string, PropertySpec> = {
   member: prop("member", "string", "Member reference for the filter"),
+  memberReference: withYamlKey(
+    prop(
+      "memberReference",
+      "string",
+      "Explicit member name when member is a function"
+    ),
+    "member_reference"
+  ),
   operator: prop("operator", "enum", "Filter operator", {
     values: filterOperators,
   }),
@@ -252,7 +260,6 @@ const conditionProperties: Record<string, PropertySpec> = {
 
 const accessPolicyProperties: Record<string, PropertySpec> = {
   role: prop("role", "string", "Role name this policy applies to (use group)", {
-    required: true,
     deprecated: true,
     deprecatedBy: "group",
   }),
@@ -303,6 +310,21 @@ const accessPolicyProperties: Record<string, PropertySpec> = {
 // View cubes item properties
 // ---------------------------------------------------------------------------
 
+const viewCubeIncludeItemProperties: Record<string, PropertySpec> = {
+  name: prop("name", "string", "Member name to include", { required: true }),
+  alias: prop("alias", "string", "Alias for the included member"),
+  title: prop("title", "string", "Display title for the included member"),
+  description: prop(
+    "description",
+    "string",
+    "Description of the included member"
+  ),
+  format: prop("format", "enum", "Display format override", {
+    values: ["imageUrl", "link", "currency", "percent", "number", "id"],
+  }),
+  meta: prop("meta", "object", "Arbitrary metadata for the included member"),
+};
+
 const viewCubeItemProperties: Record<string, PropertySpec> = {
   joinPath: withYamlKey(
     prop("joinPath", "function", "Join path reference to the cube", {
@@ -324,7 +346,10 @@ const viewCubeItemProperties: Record<string, PropertySpec> = {
   includes: prop(
     "includes",
     "array",
-    'Members to include ("*" for all, or array of member names)'
+    'Members to include ("*" for all, names, or objects with name/alias/title)',
+    {
+      children: viewCubeIncludeItemProperties,
+    }
   ),
   excludes: prop(
     "excludes",
@@ -419,6 +444,56 @@ const caseProperties: Record<string, PropertySpec> = {
   else: prop("else", "object", "Default value when no conditions match", {
     children: caseElseProperties,
   }),
+};
+
+// ---------------------------------------------------------------------------
+// Geo sub-properties
+// ---------------------------------------------------------------------------
+
+const linkItemProperties: Record<string, PropertySpec> = {
+  name: prop("name", "string", "Link identifier", { required: true }),
+  label: prop("label", "string", "Display label", { required: true }),
+  url: prop(
+    "url",
+    "function",
+    "URL expression (mutually exclusive with dashboard)"
+  ),
+  dashboard: prop(
+    "dashboard",
+    "string",
+    "Dashboard path (mutually exclusive with url)"
+  ),
+  icon: prop("icon", "string", "Icon name"),
+  target: prop("target", "enum", "Link target", {
+    values: ["blank", "self"],
+  }),
+  primary: prop("primary", "boolean", "Mark this as the primary link"),
+  params: prop("params", "array", "Query parameters for the link"),
+};
+
+const multiStageFilterProperties: Record<string, PropertySpec> = {
+  mode: prop("mode", "enum", "How include filters are applied", {
+    values: ["relative", "fixed"],
+  }),
+  include: prop(
+    "include",
+    "array",
+    "Predicates to keep in this multi-stage step"
+  ),
+  exclude: prop("exclude", "function", "Members to exclude from this step"),
+  keepOnly: withYamlKey(
+    prop("keepOnly", "function", "Members to keep in this step"),
+    "keep_only"
+  ),
+};
+
+const multiStageGrainProperties: Record<string, PropertySpec> = {
+  include: prop("include", "function", "Grain members to include"),
+  exclude: prop("exclude", "function", "Grain members to exclude"),
+  keepOnly: withYamlKey(
+    prop("keepOnly", "function", "Grain members to keep"),
+    "keep_only"
+  ),
 };
 
 // ---------------------------------------------------------------------------
@@ -619,9 +694,14 @@ const dimensionProperties: Record<string, PropertySpec> = {
   filter: prop(
     "filter",
     "object",
-    "Multi-stage include/exclude filter for this dimension"
+    "Multi-stage include/exclude filter for this dimension",
+    {
+      children: multiStageFilterProperties,
+    }
   ),
-  links: prop("links", "array", "Related links shown for this dimension"),
+  links: prop("links", "array", "Related links shown for this dimension", {
+    children: linkItemProperties,
+  }),
   mask: prop("mask", "object", "Masking expression for this dimension"),
   currency: prop(
     "currency",
@@ -631,6 +711,11 @@ const dimensionProperties: Record<string, PropertySpec> = {
   order: prop("order", "enum", "Default sort order", {
     values: ["asc", "desc"],
   }),
+  key: prop("key", "function", "Unique key expression for this dimension"),
+  keyReference: withYamlKey(
+    prop("keyReference", "string", "Member name used as the unique key"),
+    "key_reference"
+  ),
 };
 
 // ---------------------------------------------------------------------------
@@ -649,7 +734,6 @@ const measureTypes = [
   "max",
   "countDistinct",
   "countDistinctApprox",
-  "runningTotal",
 ];
 
 const measureTypesMultiStage = [...measureTypes, "numberAgg", "rank"];
@@ -820,12 +904,18 @@ const measureProperties: Record<string, PropertySpec> = {
   filter: prop(
     "filter",
     "object",
-    "Multi-stage include/exclude filter for this measure"
+    "Multi-stage include/exclude filter for this measure",
+    {
+      children: multiStageFilterProperties,
+    }
   ),
   grain: prop(
     "grain",
     "object",
-    "Multi-stage grain include/exclude for this measure"
+    "Multi-stage grain include/exclude for this measure",
+    {
+      children: multiStageGrainProperties,
+    }
   ),
   currency: prop(
     "currency",
