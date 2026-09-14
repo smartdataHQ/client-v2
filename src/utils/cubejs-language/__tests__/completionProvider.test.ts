@@ -272,7 +272,7 @@ describe("property_value completions (measure type)", () => {
     expect(labelList).toContain("max");
     expect(labelList).toContain("countDistinct");
     expect(labelList).toContain("countDistinctApprox");
-    expect(labelList).toContain("runningTotal");
+    expect(labelList).not.toContain("runningTotal");
     expect(labelList).toContain("number");
     expect(labelList).toContain("numberAgg");
     expect(labelList).toContain("rank");

@@ -2,7 +2,7 @@
  * T004: TDD tests for the Cube.js schema spec.
  *
  * Validates the static spec exported from ../spec.ts against known
- * Cube.js v1.6.19 schema requirements.
+ * Cube.js v1.7.30 schema requirements.
  */
 import { describe, it, expect } from "vitest";
 
@@ -24,8 +24,8 @@ function memberType(name: string) {
 // ---------------------------------------------------------------------------
 
 describe("CUBEJS_SPEC_VERSION", () => {
-  it('equals "1.6.19"', () => {
-    expect(CUBEJS_SPEC_VERSION).toBe("1.6.19");
+  it('equals "1.7.30"', () => {
+    expect(CUBEJS_SPEC_VERSION).toBe("1.7.30");
   });
 
   it("matches the spec version", () => {
@@ -67,6 +67,7 @@ describe("cube construct", () => {
       "preAggregations",
       "accessPolicy",
       "hierarchies",
+      "calendar",
     ];
     for (const k of expected) {
       expect(keys).toContain(k);
@@ -102,6 +103,9 @@ describe("view construct", () => {
     expect(view.properties.cubes).toBeDefined();
     expect(view.properties.folders).toBeDefined();
     expect(view.properties.isView).toBeDefined();
+    expect(view.properties.viewGroup).toBeDefined();
+    expect(view.properties.viewGroups).toBeDefined();
+    expect(view.properties.defaultFilters).toBeDefined();
   });
 
   it("cubes property has children with view cube item keys", () => {
@@ -128,11 +132,18 @@ describe("view construct", () => {
 describe("dimension types", () => {
   const dimSpec = memberType("dimensions");
 
-  it("has all 5 dimension types", () => {
+  it("has all 6 dimension types", () => {
     expect(dimSpec.typeValues).toEqual(
-      expect.arrayContaining(["string", "number", "boolean", "time", "geo"])
+      expect.arrayContaining([
+        "string",
+        "number",
+        "boolean",
+        "time",
+        "geo",
+        "switch",
+      ])
     );
-    expect(dimSpec.typeValues).toHaveLength(5);
+    expect(dimSpec.typeValues).toHaveLength(6);
   });
 });
 
@@ -153,7 +164,6 @@ describe("measure types", () => {
       "number",
       "countDistinct",
       "countDistinctApprox",
-      "runningTotal",
       "string",
       "boolean",
       "time",
@@ -420,15 +430,25 @@ describe("required properties", () => {
 describe("access policy", () => {
   const apChildren = cube.properties.accessPolicy.children!;
 
-  it("has role, memberLevel, rowLevel, conditions", () => {
+  it("has role, group, groups, memberLevel, memberMasking, rowLevel, conditions", () => {
     const keys = Object.keys(apChildren);
     expect(keys).toEqual(
-      expect.arrayContaining(["role", "memberLevel", "rowLevel", "conditions"])
+      expect.arrayContaining([
+        "role",
+        "group",
+        "groups",
+        "memberLevel",
+        "memberMasking",
+        "rowLevel",
+        "conditions",
+      ])
     );
   });
 
-  it("role is required", () => {
-    expect(apChildren.role.required).toBe(true);
+  it("role is deprecated in favor of group", () => {
+    expect(apChildren.role.required).toBe(false);
+    expect(apChildren.role.deprecated).toBe(true);
+    expect(apChildren.role.deprecatedBy).toBe("group");
   });
 
   it("memberLevel has includes/excludes children", () => {
@@ -465,5 +485,34 @@ describe("hierarchies", () => {
 
   it("levels is required", () => {
     expect(hierSpec.properties.levels.required).toBe(true);
+  });
+});
+
+describe("cube 1.7 leftovers", () => {
+  it("does not offer runningTotal as a measure type", () => {
+    expect(memberType("measures").typeValues).not.toContain("runningTotal");
+  });
+
+  it("dimensions include key, keyReference, and link children", () => {
+    const dimProps = memberType("dimensions").properties;
+    expect(dimProps.key).toBeDefined();
+    expect(dimProps.keyReference).toBeDefined();
+    expect(Object.keys(dimProps.links.children!)).toEqual(
+      expect.arrayContaining(["name", "label", "url", "dashboard"])
+    );
+  });
+
+  it("measure filter has include/exclude/keepOnly children", () => {
+    const filter = memberType("measures").properties.filter;
+    expect(Object.keys(filter.children!)).toEqual(
+      expect.arrayContaining(["mode", "include", "exclude", "keepOnly"])
+    );
+  });
+
+  it("view cube includes support name/alias/title objects", () => {
+    const includes = view.properties.cubes.children!.includes;
+    expect(Object.keys(includes.children!)).toEqual(
+      expect.arrayContaining(["name", "alias", "title", "description"])
+    );
   });
 });
