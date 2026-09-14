@@ -3,29 +3,38 @@ import { expect, vi, test, describe } from "vitest";
 
 import VersionsList from "./";
 
-// Mock data
 const mockVersions = [
   {
     id: "1",
     checksum: "checksum1",
     user: { avatarUrl: "url1", display_name: "user1" },
-    created_at: "2022-01-01",
-    dataschemas: [{ name: "schema1", code: "code1" }],
+    created_at: "2022-01-02",
+    dataschemas: [
+      {
+        name: "Orders.yml",
+        code: "cubes:\n  - name: Orders\n    sql: SELECT 2",
+      },
+    ],
   },
   {
     id: "2",
     checksum: "checksum2",
     user: { avatarUrl: "url2", display_name: "user2" },
-    created_at: "2022-01-02",
-    dataschemas: [{ name: "schema2", code: "code2" }],
+    created_at: "2022-01-01",
+    dataschemas: [
+      {
+        name: "Orders.yml",
+        code: "cubes:\n  - name: Orders\n    sql: SELECT 1",
+      },
+    ],
   },
 ];
 
-// Mock hooks
 vi.mock("@/hooks/useVersions", () => ({
   __esModule: true,
   default: () => ({
     versions: mockVersions,
+    currentVersion: mockVersions[0],
     totalCount: 2,
     queries: { allData: { fetching: false } },
   }),
@@ -39,6 +48,11 @@ vi.mock("@/hooks/useTableState", () => ({
   }),
 }));
 
+vi.mock("@/hooks/useVersionCompare", () => ({
+  useVersionOptions: () => ({ options: mockVersions, fetching: false }),
+  useVersionsWithCode: () => ({ versions: mockVersions, fetching: false }),
+}));
+
 describe("VersionsList Component", () => {
   test("renders the VersionsList component", () => {
     render(<VersionsList onRestore={() => {}} />);
@@ -46,20 +60,54 @@ describe("VersionsList Component", () => {
     expect(titleElement).toBeDefined();
   });
 
-  test("renders the Button component for each version", () => {
+  test("hides restore on the current version", () => {
     render(<VersionsList onRestore={() => {}} />);
     const buttonElements = screen.getAllByText("common:words.restore");
-    expect(buttonElements.length).toBe(mockVersions.length);
+    expect(buttonElements.length).toBe(1);
+    expect(screen.getByText("common:words.current")).toBeDefined();
   });
 
-  test("calls onRestore when the restore button is clicked", () => {
+  test("shows author, timestamp, and relative time", () => {
+    render(<VersionsList onRestore={() => {}} />);
+    expect(screen.getByText("user1")).toBeDefined();
+    expect(screen.getByText("user2")).toBeDefined();
+    expect(screen.getByText(/2022-01-02/)).toBeDefined();
+    expect(screen.getByText(/2022-01-01/)).toBeDefined();
+  });
+
+  test("shows line-change totals against the previous version", () => {
+    render(<VersionsList onRestore={() => {}} />);
+    expect(screen.getByText("+1")).toBeDefined();
+    expect(screen.getByText("-1")).toBeDefined();
+    expect(screen.getByText("version_diff.initial_version")).toBeDefined();
+  });
+
+  test("previews restore then confirms", () => {
     const mockOnRestore = vi.fn();
     render(<VersionsList onRestore={mockOnRestore} />);
-    const buttonElement = screen.getAllByText("common:words.restore")[0];
-    fireEvent.click(buttonElement);
+    fireEvent.click(screen.getByText("common:words.restore"));
+    expect(mockOnRestore).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("version_diff.restore_preview_title")
+    ).toBeDefined();
+    fireEvent.click(screen.getByTestId("confirm-restore"));
     expect(mockOnRestore).toHaveBeenCalledWith(
-      mockVersions[0].checksum,
-      mockVersions[0].dataschemas
+      mockVersions[1].checksum,
+      mockVersions[1].dataschemas
     );
+  });
+
+  test("shows changed lines when a version row is expanded", () => {
+    const { container } = render(<VersionsList onRestore={() => {}} />);
+    const expandButton = container.querySelector(
+      "button.ant-table-row-expand-icon"
+    );
+
+    expect(expandButton).toBeTruthy();
+    fireEvent.click(expandButton as Element);
+
+    expect(screen.getByText("Orders.yml")).toBeDefined();
+    expect(screen.getByText("    sql: SELECT 1")).toBeDefined();
+    expect(screen.getByText("    sql: SELECT 2")).toBeDefined();
   });
 });

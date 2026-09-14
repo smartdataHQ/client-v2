@@ -5,6 +5,28 @@
     "set_default": "Установить по умолчанию"
   },
   "versions_list": "Список версий",
+  "version_diff": {
+    "changes": "Изменения",
+    "changed_files": "Файлы",
+    "initial_version": "Начальная версия",
+    "no_file_changes": "Нет изменений в файлах",
+    "no_line_changes": "Нет изменений строк",
+    "compared_to_previous": "Изменения строк относительно предыдущей версии",
+    "added": "Добавлен",
+    "removed": "Удалён",
+    "modified": "Изменён",
+    "unchanged": "Без изменений",
+    "compare": "Сравнить",
+    "compare_from": "От (база)",
+    "compare_to": "До",
+    "compare_caption": "Изменения строк между выбранными версиями",
+    "same_version": "Выберите две разные версии",
+    "restore_preview_title": "Восстановить эту версию?",
+    "restore_preview_caption": "Изменения строк относительно текущей версии",
+    "confirm_restore": "Восстановить",
+    "unknown_user": "Неизвестный пользователь",
+    "restored_from": "Восстановлено из {{time}}"
+  },
   "alerts": {
     "no_changes": "Нет изменений.",
     "branch_removed": "Ветка удалена",

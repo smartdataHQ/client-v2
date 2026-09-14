@@ -5,6 +5,28 @@
     "set_default": "设为默认"
   },
   "versions_list": "版本列表",
+  "version_diff": {
+    "changes": "变更",
+    "changed_files": "文件",
+    "initial_version": "初始版本",
+    "no_file_changes": "文件无变更",
+    "no_line_changes": "无行级变更",
+    "compared_to_previous": "相对上一版本的行变更",
+    "added": "新增",
+    "removed": "删除",
+    "modified": "修改",
+    "unchanged": "未变更",
+    "compare": "比较",
+    "compare_from": "从（基准）",
+    "compare_to": "到",
+    "compare_caption": "所选版本之间的行变更",
+    "same_version": "请选择两个不同的版本",
+    "restore_preview_title": "恢复此版本？",
+    "restore_preview_caption": "相对当前版本的行变更",
+    "confirm_restore": "恢复",
+    "unknown_user": "未知用户",
+    "restored_from": "恢复自 {{time}}"
+  },
   "alerts": {
     "no_changes": "没有更改。",
     "branch_removed": "分支已移除",
