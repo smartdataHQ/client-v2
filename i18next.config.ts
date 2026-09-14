@@ -8,13 +8,22 @@ use(Backend)
   .use(initReactI18next)
   .init({
     fallbackLng: "en",
+    load: "languageOnly",
     detection: {
       order: ["localStorage", "cookie"],
       caches: ["localStorage", "cookie"],
     },
     ns: ["common"],
+    defaultNS: "common",
     interpolation: {
       escapeValue: false,
+    },
+    backend: {
+      loadPath: "/locales/{{lng}}/{{ns}}.json",
+      queryStringParams: { v: "2" },
+      requestOptions: {
+        cache: "no-store",
+      },
     },
   });
 

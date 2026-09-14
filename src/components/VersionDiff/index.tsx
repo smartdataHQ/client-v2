@@ -24,11 +24,15 @@ const signForType = (type: DiffLineType): string => {
 };
 
 const VersionDiff: FC<VersionDiffProps> = ({ hunks }) => {
-  const { t } = useTranslation(["models"]);
+  const { t } = useTranslation(["models"], { useSuspense: false });
 
   if (!hunks.length) {
     return (
-      <div className={styles.empty}>{t("version_diff.no_line_changes")}</div>
+      <div className={styles.empty}>
+        {t("models:version_diff.no_line_changes", {
+          defaultValue: "No line changes",
+        })}
+      </div>
     );
   }
 

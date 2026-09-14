@@ -8,7 +8,7 @@ import VersionDiff from "./";
 describe("VersionDiff Component", () => {
   test("renders an empty state when there are no hunks", () => {
     render(<VersionDiff hunks={[]} />);
-    expect(screen.getByText("version_diff.no_line_changes")).toBeDefined();
+    expect(screen.getByText("No line changes")).toBeDefined();
   });
 
   test("renders changed lines with line numbers", () => {
