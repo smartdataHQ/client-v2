@@ -334,7 +334,7 @@ export const Models: React.FC<ModelsProps> = ({
             </>
           )}
           <Modal
-            width={1004}
+            width={1100}
             open={!!versionsModalVisible}
             onClose={onModalClose}
           >

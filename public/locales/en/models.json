@@ -5,6 +5,28 @@
     "set_default": "Set default"
   },
   "versions_list": "Versions List",
+  "version_diff": {
+    "changes": "Changes",
+    "changed_files": "Files",
+    "initial_version": "Initial version",
+    "no_file_changes": "No file changes",
+    "no_line_changes": "No line changes",
+    "compared_to_previous": "Line changes from the previous version",
+    "added": "Added",
+    "removed": "Removed",
+    "modified": "Modified",
+    "unchanged": "Unchanged",
+    "compare": "Compare",
+    "compare_from": "From (base)",
+    "compare_to": "To",
+    "compare_caption": "Line changes between the selected versions",
+    "same_version": "Select two different versions",
+    "restore_preview_title": "Restore this version?",
+    "restore_preview_caption": "Line changes versus the current version",
+    "confirm_restore": "Restore",
+    "unknown_user": "Unknown user",
+    "restored_from": "Restored from {{time}}"
+  },
   "alerts": {
     "no_changes": "There is no changes.",
     "branch_removed": "Branch removed",

@@ -10,15 +10,54 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
+.checksumBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
 .checksum {
   font-weight: 700;
   font-size: 14px;
+  font-family: monospace;
+  word-break: break-all;
 }
 
-.author,
+.restoredChecksum {
+  color: #1677ff;
+}
+
+.restoreTag {
+  margin-inline-end: 0 !important;
+}
+
+.author {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 600;
+}
+
+.authorName {
+  color: rgba(0, 0, 0, 0.85);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.createdBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .createdAt {
   color: rgba(0, 0, 0, 0.5);
   font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.relativeTime {
+  color: rgba(0, 0, 0, 0.4);
 }
 
 .actions {
@@ -45,6 +84,61 @@
 .fileName {
   font-weight: 600;
   font-size: 14px;
+}
+
+.changeStats {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.addedCount {
+  color: #22863a;
+}
+
+.removedCount {
+  margin-left: 8px;
+  color: #cb2431;
+}
+
+.filesHint {
+  display: block;
+  margin-top: 2px;
+  color: rgba(0, 0, 0, 0.45);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.initialVersion,
+.noChanges {
+  color: rgba(0, 0, 0, 0.45);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.diffSection {
+  width: 100%;
+}
+
+.diffCaption {
+  color: rgba(0, 0, 0, 0.45);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.compareBar {
+  width: 100%;
+}
+
+.compareLabel {
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.compareSelect {
+  min-width: 240px;
 }
 
 .save {
