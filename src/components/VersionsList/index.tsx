@@ -35,6 +35,41 @@ import type { TableProps } from "antd";
 const { Title } = Typography;
 const EMPTY_IDS: string[] = [];
 
+const VERSION_DIFF_EN = {
+  changes: "Changes",
+  changed_files: "Files",
+  initial_version: "Initial version",
+  no_file_changes: "No file changes",
+  no_line_changes: "No line changes",
+  compared_to_previous: "Line changes from the previous version",
+  added: "Added",
+  removed: "Removed",
+  modified: "Modified",
+  unchanged: "Unchanged",
+  compare: "Compare",
+  compare_from: "From (base)",
+  compare_to: "To",
+  compare_caption: "Line changes between the selected versions",
+  same_version: "Select two different versions",
+  restore_preview_title: "Restore this version?",
+  restore_preview_caption: "Line changes versus the current version",
+  confirm_restore: "Restore",
+  unknown_user: "Unknown user",
+  restored_from: "Restored from {{time}}",
+} as const;
+
+type VersionDiffKey = keyof typeof VERSION_DIFF_EN;
+
+const versionDiffT = (
+  t: (key: string, options?: Record<string, unknown>) => string,
+  key: VersionDiffKey,
+  options?: Record<string, unknown>
+) =>
+  t(`models:version_diff.${key}`, {
+    defaultValue: VERSION_DIFF_EN[key],
+    ...options,
+  });
+
 type VersionUser = {
   display_name?: string | null;
   avatarUrl?: string | null;
@@ -65,13 +100,13 @@ const VersionFileChanges: FC<{
   caption: string;
   loading?: boolean;
 }> = ({ diff, caption, loading }) => {
-  const { t } = useTranslation(["models"]);
+  const { t } = useTranslation(["models"], { useSuspense: false });
   const files = diff?.changedFiles ?? [];
 
   if (!files.length) {
     return (
       <div className={styles.noChanges}>
-        {t("version_diff.no_file_changes")}
+        {versionDiffT(t, "no_file_changes")}
       </div>
     );
   }
@@ -85,7 +120,7 @@ const VersionFileChanges: FC<{
           <YAMLIcon />
           {value}
           <Tag color={kindTagColor[file.kind]}>
-            {t(`version_diff.${file.kind}`)}
+            {versionDiffT(t, file.kind)}
           </Tag>
         </Space>
       ),
@@ -120,7 +155,7 @@ const VersionFileChanges: FC<{
 };
 
 const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
-  const { t } = useTranslation(["models", "common"]);
+  const { t } = useTranslation(["models", "common"], { useSuspense: false });
   const [restoreTarget, setRestoreTarget] = useState<Version | null>(null);
   const [compareFromId, setCompareFromId] = useState<string>();
   const [compareToId, setCompareToId] = useState<string>();
@@ -281,7 +316,7 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
     if (diff.isInitial) {
       return (
         <span className={styles.initialVersion}>
-          {t("version_diff.initial_version")}
+          {versionDiffT(t, "initial_version")}
         </span>
       );
     }
@@ -289,7 +324,7 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
     if (!diff.changedFiles.length) {
       return (
         <span className={styles.noChanges}>
-          {t("version_diff.no_file_changes")}
+          {versionDiffT(t, "no_file_changes")}
         </span>
       );
     }
@@ -299,7 +334,7 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
         <span className={styles.addedCount}>+{diff.addedLines}</span>
         <span className={styles.removedCount}>-{diff.removedLines}</span>
         <span className={styles.filesHint}>
-          {t("version_diff.changed_files")}: {diff.changedFiles.length}
+          {versionDiffT(t, "changed_files")}: {diff.changedFiles.length}
         </span>
       </div>
     );
@@ -333,8 +368,7 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
             {restoredFrom && (
               <Tooltip title={formatTime(restoredFrom.created_at)}>
                 <Tag className={styles.restoreTag} color="blue">
-                  {t("models:version_diff.restored_from", {
-                    defaultValue: "Restored from {{time}}",
+                  {versionDiffT(t, "restored_from", {
                     time: formatTime(
                       restoredFrom.created_at,
                       "YYYY-MM-DD HH:mm"
@@ -353,7 +387,7 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
       key: "created_at",
       render: (value, record) => {
         const user = record.user as VersionUser | null | undefined;
-        const name = authorLabel(user, t("version_diff.unknown_user"));
+        const name = authorLabel(user, versionDiffT(t, "unknown_user"));
 
         return (
           <div className={styles.createdBlock}>
@@ -377,7 +411,7 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
       },
     },
     {
-      title: t("version_diff.changes"),
+      title: versionDiffT(t, "changes"),
       key: "changes",
       render: (_, record) => renderChangeSummary(diffsById.get(record.id)),
     },
@@ -410,8 +444,8 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
         diff={diff}
         caption={
           diff?.isInitial
-            ? t("version_diff.initial_version")
-            : t("version_diff.compared_to_previous")
+            ? versionDiffT(t, "initial_version")
+            : versionDiffT(t, "compared_to_previous")
         }
         loading={fetching}
       />
@@ -434,11 +468,11 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
       {totalCount > 1 && (
         <Space className={styles.compareBar} size={8} wrap>
           <span className={styles.compareLabel}>
-            {t("version_diff.compare")}
+            {versionDiffT(t, "compare")}
           </span>
           <Select
             className={styles.compareSelect}
-            placeholder={t("version_diff.compare_from")}
+            placeholder={versionDiffT(t, "compare_from")}
             value={compareFromId}
             options={compareSelectOptions}
             onChange={setCompareFromId}
@@ -448,7 +482,7 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
           />
           <Select
             className={styles.compareSelect}
-            placeholder={t("version_diff.compare_to")}
+            placeholder={versionDiffT(t, "compare_to")}
             value={compareToId}
             options={compareSelectOptions}
             onChange={setCompareToId}
@@ -459,12 +493,14 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
         </Space>
       )}
       {compareFromId && compareToId && compareFromId === compareToId && (
-        <div className={styles.noChanges}>{t("version_diff.same_version")}</div>
+        <div className={styles.noChanges}>
+          {versionDiffT(t, "same_version")}
+        </div>
       )}
       {compareDiff && (
         <VersionFileChanges
           diff={compareDiff}
-          caption={t("version_diff.compare_caption")}
+          caption={versionDiffT(t, "compare_caption")}
           loading={compareFetching}
         />
       )}
@@ -485,7 +521,7 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
       />
       <Modal
         open={Boolean(restoreTarget)}
-        title={t("version_diff.restore_preview_title")}
+        title={versionDiffT(t, "restore_preview_title")}
         onCancel={() => setRestoreTarget(null)}
         zIndex={2000}
         width={920}
@@ -499,13 +535,13 @@ const VersionsList: FC<VersionsListProps> = ({ onRestore, branch }) => {
             onClick={confirmRestore}
             data-testid="confirm-restore"
           >
-            {t("version_diff.confirm_restore")}
+            {versionDiffT(t, "confirm_restore")}
           </Button>,
         ]}
       >
         <VersionFileChanges
           diff={restorePreviewDiff}
-          caption={t("version_diff.restore_preview_caption")}
+          caption={versionDiffT(t, "restore_preview_caption")}
         />
       </Modal>
     </Space>

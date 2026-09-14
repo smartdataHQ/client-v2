@@ -79,7 +79,7 @@ describe("VersionsList Component", () => {
     render(<VersionsList onRestore={() => {}} />);
     expect(screen.getByText("+1")).toBeDefined();
     expect(screen.getByText("-1")).toBeDefined();
-    expect(screen.getByText("version_diff.initial_version")).toBeDefined();
+    expect(screen.getByText("Initial version")).toBeDefined();
   });
 
   test("previews restore then confirms", () => {
@@ -87,9 +87,7 @@ describe("VersionsList Component", () => {
     render(<VersionsList onRestore={mockOnRestore} />);
     fireEvent.click(screen.getByText("common:words.restore"));
     expect(mockOnRestore).not.toHaveBeenCalled();
-    expect(
-      screen.getByText("version_diff.restore_preview_title")
-    ).toBeDefined();
+    expect(screen.getByText("Restore this version?")).toBeDefined();
     fireEvent.click(screen.getByTestId("confirm-restore"));
     expect(mockOnRestore).toHaveBeenCalledWith(
       mockVersions[1].checksum,

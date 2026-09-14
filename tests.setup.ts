@@ -31,7 +31,8 @@ vi.mock("react-i18next", () => ({
   // this mock makes sure any components using the translate hook can use it without a warning being shown
   useTranslation: () => {
     return {
-      t: (str: string) => str,
+      t: (str: string, options?: { defaultValue?: string }) =>
+        options?.defaultValue ?? str,
       i18n: {
         changeLanguage: () => new Promise(() => {}),
         language: "en",
