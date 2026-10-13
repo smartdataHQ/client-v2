@@ -31,6 +31,7 @@ import { parseYamlDocument } from "@/utils/cubejs-language/yamlParser";
 import { parseJsDocument } from "@/utils/cubejs-language/jsParser";
 import { CubeRegistry } from "@/utils/cubejs-language/registry";
 import { isSmartGenerated, parseProvenance } from "@/utils/provenanceParser";
+import AuthTokensStore from "@/stores/AuthTokensStore";
 import CurrentUserStore from "@/stores/CurrentUserStore";
 
 import SaveIcon from "@/assets/save.svg";
@@ -406,9 +407,17 @@ const CodeEditor: FC<CodeEditorProps> = ({
       },
       validateOnBackend: async (schemaFiles) => {
         try {
+          // /api/v1/validate is behind checkAuth; without a token every
+          // call failed and backend errors/warnings never reached the editor.
+          const token =
+            AuthTokensStore.getState().workosAccessToken ||
+            AuthTokensStore.getState().accessToken;
           const res = await fetch("/api/v1/validate", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({ files: schemaFiles }),
           });
           if (!res.ok) return [];
